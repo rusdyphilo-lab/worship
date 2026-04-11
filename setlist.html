@@ -29,7 +29,6 @@
   </div>
 
   <div id="setlist-container">
-    <!-- Skeleton loading -->
     <div class="skeleton-card" style="min-height:160px;border-radius:12px;gap:12px">
       <div class="skeleton-line skeleton-title" style="width:50%"></div>
       <div class="skeleton-line skeleton-sub" style="width:35%"></div>
@@ -51,26 +50,46 @@
 let allServices = []
 let activeType = null
 
-// JOB #9 — detect "this week" (Mon–Sun of current week)
-function getThisWeekRange() {
+function todayStr() {
+  return new Date().toISOString().split('T')[0]
+}
+
+function isThisWeek(dateStr) {
   const now = new Date()
-  const day = now.getDay() // 0=Sun, 1=Mon...
+  const day = now.getDay()
   const monday = new Date(now)
   monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1))
   monday.setHours(0,0,0,0)
   const sunday = new Date(monday)
   sunday.setDate(monday.getDate() + 6)
   sunday.setHours(23,59,59,999)
-  return { monday, sunday }
-}
-
-function isThisWeek(dateStr) {
-  const { monday, sunday } = getThisWeekRange()
   const d = new Date(dateStr + 'T00:00:00')
   return d >= monday && d <= sunday
 }
 
+async function deleteOldSetlists() {
+  const today = todayStr()
+  // Get old service IDs
+  const { data: oldSvcs } = await db
+    .from('services')
+    .select('id')
+    .lt('service_date', today)
+
+  if (!oldSvcs || oldSvcs.length === 0) return
+
+  const ids = oldSvcs.map(s => s.id)
+
+  // Delete setlist_items first (FK constraint)
+  await db.from('setlist_items').delete().in('service_id', ids)
+  // Delete services
+  await db.from('services').delete().in('id', ids)
+}
+
 async function loadSetlists() {
+  // Auto-delete past setlists first
+  await deleteOldSetlists()
+
+  const today = todayStr()
   const { data, error } = await db
     .from('services')
     .select(`
@@ -80,8 +99,8 @@ async function loadSetlists() {
         songs ( id, title )
       )
     `)
-    .order('service_date', { ascending: false })
-    .limit(20)
+    .gte('service_date', today)
+    .order('service_date', { ascending: true })
 
   if (error) {
     document.getElementById('setlist-container').innerHTML =
@@ -93,6 +112,9 @@ async function loadSetlists() {
     ...s,
     setlist_items: (s.setlist_items || []).sort((a, b) => a.position - b.position)
   }))
+
+  window._servicesMap = {}
+  allServices.forEach(s => { window._servicesMap[s.id] = s })
 
   renderSetlists(allServices)
 }
@@ -106,10 +128,11 @@ function renderSetlists(services) {
 
   el.innerHTML = services.map(svc => {
     const thisWeek = isThisWeek(svc.service_date)
+    const serviceUrl = `${location.origin}${location.pathname.replace('setlist.html','')}setlist.html?service=${svc.id}`
     return `
     <div class="setlist-card${thisWeek ? ' this-week' : ''}">
       <div class="setlist-header">
-        <div>
+        <div style="flex:1;min-width:0">
           <div class="setlist-title">${escapeHtml(svc.theme || svc.service_type)}</div>
           <div class="setlist-date">
             ${formatDate(svc.service_date)}
@@ -118,13 +141,19 @@ function renderSetlists(services) {
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
           ${serviceTypeBadge(svc.service_type)}
-          <!-- JOB #12 — Share button -->
-          <button class="setlist-share-btn" onclick="shareSetlist(event, '${svc.id}')" title="Bagikan setlist">
+          <button class="setlist-share-btn" onclick="copyLink(event,'${svc.id}')" title="Salin link setlist">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
             </svg>
+            <span style="font-size:11px">Salin link</span>
+          </button>
+          <button class="setlist-share-btn" onclick="openEditSetlist('${svc.id}')" title="Edit setlist" style="gap:4px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            <span style="font-size:11px">Edit</span>
           </button>
         </div>
       </div>
@@ -143,10 +172,143 @@ function renderSetlists(services) {
       }
     </div>`
   }).join('')
+}
 
-  // Store service data for share function
-  window._servicesMap = {}
-  services.forEach(s => { window._servicesMap[s.id] = s })
+function copyLink(event, serviceId) {
+  event.preventDefault()
+  event.stopPropagation()
+  const url = `${location.origin}${location.pathname.replace('setlist.html', '')}setlist.html?service=${serviceId}`
+  navigator.clipboard.writeText(url)
+    .then(() => toast('Link disalin! Tempel ke WhatsApp.'))
+    .catch(() => toast('Gagal menyalin link'))
+}
+
+// ============================================================
+// EDIT SETLIST
+// ============================================================
+let editServiceId = null
+let editSongs = []   // [{id, title, keyUsed, note, position}]
+let allSongsCache = []
+
+async function openEditSetlist(serviceId) {
+  editServiceId = serviceId
+  const svc = window._servicesMap[serviceId]
+  if (!svc) return
+
+  editSongs = svc.setlist_items.map((item, i) => ({
+    id: item.songs.id,
+    title: item.songs.title,
+    keyUsed: item.key_used || 'C',
+    note: item.note || '',
+    position: item.position || i + 1
+  }))
+
+  // Load all songs for picker if not cached
+  if (!allSongsCache.length) {
+    const { data } = await db.from('songs').select('id,title,default_key').order('title')
+    allSongsCache = data || []
+  }
+
+  renderEditModal(svc)
+  document.getElementById('edit-modal').style.display = 'block'
+  document.body.style.overflow = 'hidden'
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').style.display = 'none'
+  document.body.style.overflow = ''
+}
+
+function renderEditModal(svc) {
+  document.getElementById('edit-modal-title').textContent =
+    `Edit — ${svc.theme || svc.service_type} · ${formatDate(svc.service_date)}`
+  renderEditSongs()
+  renderEditPicker()
+}
+
+function renderEditSongs() {
+  const el = document.getElementById('edit-song-list')
+  if (!editSongs.length) {
+    el.innerHTML = '<div style="color:var(--hint);font-size:13px;padding:8px 0">Belum ada lagu. Tambahkan dari daftar di bawah.</div>'
+    return
+  }
+  el.innerHTML = editSongs.map((s, i) => `
+    <div class="card" style="cursor:default;margin-bottom:6px;padding:10px 12px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="color:var(--hint);font-size:13px;font-weight:500;min-width:18px">${i+1}</span>
+        <span style="font-weight:500;flex:1;font-size:14px">${escapeHtml(s.title)}</span>
+        <div style="display:flex;gap:4px;">
+          ${i > 0 ? `<button class="btn" style="padding:4px 8px;font-size:12px;min-height:32px" onclick="moveEditSong(${i},-1)">↑</button>` : '<div style="width:36px"></div>'}
+          ${i < editSongs.length-1 ? `<button class="btn" style="padding:4px 8px;font-size:12px;min-height:32px" onclick="moveEditSong(${i},1)">↓</button>` : '<div style="width:36px"></div>'}
+          <button class="btn btn-danger" style="padding:4px 8px;font-size:12px;min-height:32px" onclick="removeEditSong(${i})">✕</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;padding-left:26px;">
+        <select class="input-field" style="flex:0 0 72px;font-size:13px;min-height:36px;padding:6px 8px"
+          onchange="editSongs[${i}].keyUsed=this.value">
+          ${KEYS.map(k => `<option ${k===s.keyUsed?'selected':''}>${k}</option>`).join('')}
+        </select>
+        <input class="input-field" type="text" placeholder="catatan..." style="font-size:13px;min-height:36px;padding:6px 8px"
+          value="${escapeHtml(s.note)}" oninput="editSongs[${i}].note=this.value" />
+      </div>
+    </div>
+  `).join('')
+}
+
+function renderEditPicker(q = '') {
+  const el = document.getElementById('edit-song-picker')
+  const filtered = q
+    ? allSongsCache.filter(s => s.title.toLowerCase().includes(q.toLowerCase()))
+    : allSongsCache
+  el.innerHTML = filtered.map(s => `
+    <div class="card" style="margin-bottom:4px;padding:10px 12px;" onclick="addEditSong('${s.id}','${escapeHtml(s.title).replace(/'/g,"\\'")}','${s.default_key||'C'}')">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <span style="font-size:14px;font-weight:500">${escapeHtml(s.title)}</span>
+        <span style="font-size:12px;color:var(--hint)">+ tambah</span>
+      </div>
+    </div>
+  `).join('')
+}
+
+function addEditSong(id, title, keyUsed) {
+  if (editSongs.find(s => s.id === id)) { toast('Lagu sudah ada'); return }
+  editSongs.push({ id, title, keyUsed, note: '', position: editSongs.length + 1 })
+  renderEditSongs()
+}
+
+function removeEditSong(i) {
+  editSongs.splice(i, 1)
+  renderEditSongs()
+}
+
+function moveEditSong(i, dir) {
+  const j = i + dir
+  if (j < 0 || j >= editSongs.length) return
+  ;[editSongs[i], editSongs[j]] = [editSongs[j], editSongs[i]]
+  renderEditSongs()
+}
+
+async function saveEditSetlist() {
+  if (!editSongs.length) { toast('Minimal 1 lagu'); return }
+
+  // Delete existing items
+  await db.from('setlist_items').delete().eq('service_id', editServiceId)
+
+  // Insert updated items
+  const items = editSongs.map((s, i) => ({
+    service_id: editServiceId,
+    song_id: s.id,
+    position: i + 1,
+    key_used: s.keyUsed || null,
+    note: s.note || null
+  }))
+
+  const { error } = await db.from('setlist_items').insert(items)
+  if (error) { toast('Gagal menyimpan: ' + error.message); return }
+
+  toast('Setlist diperbarui!')
+  closeEditModal()
+  loadSetlists()
 }
 
 function filterType(type, btn) {
@@ -157,38 +319,6 @@ function filterType(type, btn) {
   renderSetlists(filtered)
 }
 
-// JOB #12 — Share setlist via Web Share API or fallback clipboard
-function shareSetlist(event, serviceId) {
-  event.preventDefault()
-  event.stopPropagation()
-  const svc = window._servicesMap && window._servicesMap[serviceId]
-  if (!svc) return
-
-  const lines = []
-  lines.push(`🎵 *Setlist Ibadah*`)
-  lines.push(`📅 ${formatDate(svc.service_date)}`)
-  lines.push(`⛪ ${svc.service_type}${svc.theme ? ' — ' + svc.theme : ''}`)
-  lines.push('')
-  svc.setlist_items.forEach((item, i) => {
-    const key = item.key_used ? ` (${item.key_used})` : ''
-    const note = item.note ? ` — ${item.note}` : ''
-    lines.push(`${i + 1}. ${item.songs.title}${key}${note}`)
-  })
-  lines.push('')
-  lines.push('_Worship App_')
-
-  const text = lines.join('\n')
-
-  if (navigator.share) {
-    navigator.share({ title: `Setlist ${svc.service_type}`, text })
-      .catch(() => {}) // User cancelled
-  } else {
-    navigator.clipboard.writeText(text)
-      .then(() => toast('Setlist disalin ke clipboard'))
-      .catch(() => toast('Gagal menyalin'))
-  }
-}
-
 function escapeHtml(str) {
   if (!str) return ''
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -196,5 +326,38 @@ function escapeHtml(str) {
 
 loadSetlists()
 </script>
+
+<!-- Edit Setlist Modal -->
+<div id="edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;overflow-y:auto;">
+  <div style="max-width:560px;margin:2rem auto;padding:1rem;">
+    <div style="background:var(--surface);border-radius:var(--radius);padding:1.25rem;border:1px solid var(--border);">
+
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;gap:8px;">
+        <div style="font-size:15px;font-weight:500;line-height:1.4" id="edit-modal-title"></div>
+        <button class="btn" onclick="closeEditModal()" style="padding:6px 12px;flex-shrink:0;">✕</button>
+      </div>
+
+      <div class="section-label" style="margin-top:0">Urutan Lagu</div>
+      <div id="edit-song-list" style="margin-bottom:1rem;"></div>
+
+      <div class="section-label">Tambah lagu</div>
+      <div class="search-wrap" style="margin-bottom:8px;">
+        <span class="search-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </span>
+        <input class="search-input" type="text" placeholder="Cari lagu..." oninput="renderEditPicker(this.value)" />
+      </div>
+      <div id="edit-song-picker" style="max-height:220px;overflow-y:auto;margin-bottom:1rem;"></div>
+
+      <div class="btn-row" style="margin-top:0;">
+        <button class="btn btn-primary" onclick="saveEditSetlist()">Simpan</button>
+        <button class="btn" onclick="closeEditModal()">Batal</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

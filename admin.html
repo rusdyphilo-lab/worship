@@ -198,6 +198,18 @@
             <span style="font-size:20px;line-height:1;">·</span>
             <span style="font-size:10px;opacity:.6;">tahan</span>
           </button>
+          <button type="button" class="kbd-btn synco-btn" onclick="pressParen('(')" style="flex:1;flex-direction:column;gap:2px;">
+            <span style="font-size:16px;line-height:1;">(</span>
+            <span style="font-size:10px;opacity:.8;">sinkop</span>
+          </button>
+          <button type="button" class="kbd-btn synco-btn" onclick="pressParen(')')" style="flex:1;flex-direction:column;gap:2px;">
+            <span style="font-size:16px;line-height:1;">)</span>
+            <span style="font-size:10px;opacity:.8;">sinkop</span>
+          </button>
+          <button type="button" class="kbd-btn" onclick="pressSpace()" style="flex:1;color:var(--muted);flex-direction:column;gap:2px;">
+            <span style="font-size:13px;line-height:1;">␣</span>
+            <span style="font-size:10px;opacity:.6;">spasi</span>
+          </button>
           <button type="button" class="kbd-btn" onclick="pressEnter()" style="flex:2;color:var(--muted);font-size:13px;letter-spacing:1px;">↵ baris baru</button>
         </div>
 
@@ -395,6 +407,8 @@ async function deleteSong() {
 
 let kbdMode = 'chord'   // 'chord' | 'slash'
 let pendingChord = ''   // chord token being completed with slash bass
+let inSynco = false     // inside sinkopasi group
+let syncoBuffer = []    // accumulate tokens inside ()
 
 function switchSec(sec, btn) {
   currentSec = sec
@@ -412,6 +426,7 @@ function resetKbdState() {
   updatePreview()
   const pi = document.getElementById('paste-input')
   if (pi) pi.value = ''
+  // don't reset inSynco/syncoBuffer here — they persist until ) is pressed
 }
 
 function renderDisplay() {
@@ -450,6 +465,19 @@ function renderDisplay() {
       el.className = 'prog-dot-chip'
       el.textContent = '·'
       el.title = 'tahan chord (klik hapus)'
+      el.onclick = () => { sections[currentSec].splice(i, 1); renderDisplay() }
+      disp.appendChild(el)
+    } else if (token === ' ') {
+      const el = document.createElement('span')
+      el.style.cssText = 'width:8px;display:inline-block;'
+      el.title = 'spasi (klik hapus)'
+      el.onclick = () => { sections[currentSec].splice(i, 1); renderDisplay() }
+      disp.appendChild(el)
+    } else if (token.startsWith('(') && token.endsWith(')')) {
+      const el = document.createElement('span')
+      el.className = 'prog-chip synco-chip'
+      el.innerHTML = `${escapeHtml(token)}<span class="prog-chip-del">×</span>`
+      el.title = 'sinkopasi'
       el.onclick = () => { sections[currentSec].splice(i, 1); renderDisplay() }
       disp.appendChild(el)
     } else {
@@ -503,7 +531,11 @@ function pressNum(n) {
   // Modifier order: number first, then mods (e.g. 4M#)
   const mods = activeMods.join('')
   const token = n + mods
-  sections[currentSec].push(token)
+  if (inSynco) {
+    syncoBuffer.push(token)
+  } else {
+    sections[currentSec].push(token)
+  }
   pendingChord = token
   activeMods = []
   kbdMode = 'chord'
@@ -557,6 +589,33 @@ function updateModBtns() {
 function pressDot() {
   if (!sections[currentSec]) sections[currentSec] = []
   sections[currentSec].push('.')
+  resetKbdState()
+  renderDisplay()
+}
+
+function pressParen(p) {
+  if (!sections[currentSec]) sections[currentSec] = []
+  // ( opens a sinkopasi group, ) closes it
+  // We track open paren state so numbers inside get wrapped
+  if (p === '(') {
+    inSynco = true
+    syncoBuffer = []
+  } else {
+    if (inSynco && syncoBuffer.length > 0) {
+      sections[currentSec].push('(' + syncoBuffer.join('') + ')')
+    }
+    inSynco = false
+    syncoBuffer = []
+  }
+  resetKbdState()
+  renderDisplay()
+}
+
+function pressSpace() {
+  // Space is used to separate passing chords visually
+  // We represent it as a special token
+  if (!sections[currentSec]) sections[currentSec] = []
+  sections[currentSec].push(' ')
   resetKbdState()
   renderDisplay()
 }

@@ -62,7 +62,16 @@ function renderProgression(tokens, keyIdx) {
   return tokens.map(t => {
     if (t === '|') return '<span class="chord-sep">|</span>'
     if (t === '/') return '<span class="chord-sep">/</span>'
-    if (t.startsWith('(')) return `<span class="chord-note">${t}</span>`
+    if (t === ' ') return '<span style="display:inline-block;width:6px"></span>'
+    if (t === '.') return '<span class="chord-dot">·</span>'
+    // Sinkopasi group: (4m5) — translate each token inside
+    if (t.startsWith('(') && t.endsWith(')')) {
+      const inner = t.slice(1, -1)
+      // Try to split into chord tokens (e.g. "4m5" → ["4m","5"])
+      const parts = inner.match(/[1-7][mM#]*/g) || [inner]
+      const translated = parts.map(p => tokenToChord(p, keyIdx)).join('')
+      return `<span class="chord-pill synco-pill">(${translated})</span>`
+    }
     const chord = tokenToChord(t, keyIdx)
     return `<span class="chord-pill">${chord}</span>`
   }).join(' ')

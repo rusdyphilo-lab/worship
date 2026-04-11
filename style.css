@@ -673,6 +673,51 @@ nav {
 }
 .prog-dot-chip:active { opacity: 1; transform: scale(0.92); }
 
+/* Sinkopasi keyboard button */
+.synco-btn {
+  background: #fff8e1 !important;
+  border-color: #f59e0b !important;
+  color: #92400e !important;
+}
+@media (prefers-color-scheme: dark) {
+  .synco-btn {
+    background: #2d1f00 !important;
+    border-color: #b45309 !important;
+    color: #fcd34d !important;
+  }
+}
+.synco-btn:active { background: #fef3c7 !important; transform: scale(0.92); }
+
+/* Sinkopasi chip in preview */
+.synco-chip {
+  background: #fff8e1 !important;
+  color: #92400e !important;
+  border-color: #f59e0b !important;
+  font-style: italic;
+}
+@media (prefers-color-scheme: dark) {
+  .synco-chip {
+    background: #2d1f00 !important;
+    color: #fcd34d !important;
+    border-color: #b45309 !important;
+  }
+}
+
+/* Sinkopasi pill in chord viewer */
+.synco-pill {
+  background: #fff8e1;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+  font-style: italic;
+}
+@media (prefers-color-scheme: dark) {
+  .synco-pill {
+    background: #2d1f00;
+    color: #fcd34d;
+    border-color: #b45309;
+  }
+}
+
 .num-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
