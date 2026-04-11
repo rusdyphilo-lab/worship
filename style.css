@@ -516,7 +516,7 @@ nav {
   background: var(--bg);
   transform: scale(0.985);
 }
-.setlist-num { font-size: 13px; color: var(--hint); min-width: 20px; flex-shrink: 0; }
+.setlist-num { font-size: 13px; color: var(--muted); min-width: 20px; flex-shrink: 0; font-weight: 500; }
 .setlist-info { flex: 1; min-width: 0; }
 .setlist-song { font-size: 15px; font-weight: 500; word-break: break-word; }
 .setlist-key { font-size: 13px; color: var(--muted); }
@@ -656,6 +656,23 @@ nav {
 }
 .prog-bar:hover { opacity: 1; }
 
+/* Sustain dot token — dashed border for visual distinction */
+.prog-dot-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  min-height: 36px;
+  font-size: 18px;
+  color: var(--muted);
+  cursor: pointer;
+  touch-action: manipulation;
+  opacity: 0.8;
+}
+.prog-dot-chip:active { opacity: 1; transform: scale(0.92); }
+
 .num-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -694,9 +711,9 @@ nav {
   transform: scale(0.92);
 }
 .mod-btn {
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--muted);
+  border: 1px solid var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
   padding: 0;
   min-height: 44px;
   border-radius: var(--radius-sm);

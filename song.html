@@ -353,12 +353,12 @@ function render() {
       </div>
       <div class="song-top-actions">
         <!-- JOB #13 — Wake Lock button -->
-        <button class="icon-btn" id="wake-btn" onclick="toggleWakeLock()" title="Cegah layar mati">
+        <button class="icon-btn" id="wake-btn" onclick="toggleWakeLock()" title="Cegah layar mati" aria-label="Cegah layar mati">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><circle cx="12" cy="9" r="2.5"/>
           </svg>
         </button>
-        <button class="icon-btn" onclick="location.href='admin.html?edit=${song.id}'" title="Edit lagu">&#9998;</button>
+        <button class="icon-btn" onclick="location.href='admin.html?edit=${song.id}'" title="Edit lagu" aria-label="Edit lagu" style="font-size:18px;">✏️</button>
       </div>
     </div>
 

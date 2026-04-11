@@ -162,14 +162,13 @@
           <span class="prog-placeholder" id="prog-placeholder">ketuk angka di bawah...</span>
         </div>
 
-        <!-- Paste / Copy bar -->
+        <!-- Paste / Add bar -->
         <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center;">
           <input class="input-field" id="paste-input" type="text"
-            placeholder="paste/ketik: 1 2m 4 5 | 1 4M#/5 1"
+            placeholder="tempel/ketik: 1 2m 4 5 | 1 4M#/5 1"
             style="flex:1;font-size:13px;font-family:monospace;"
             onkeydown="if(event.key==='Enter'){event.preventDefault();parsePaste()}" />
-          <button type="button" class="btn" onclick="parsePaste()" style="white-space:nowrap;font-size:13px;">+ Masuk</button>
-          <button type="button" class="btn" onclick="copySection()" style="white-space:nowrap;font-size:13px;" title="Copy section ini">⎘ Copy</button>
+          <button type="button" class="btn btn-primary" onclick="parsePaste()" style="white-space:nowrap;font-size:13px;padding:10px 14px;">+ Tempel</button>
         </div>
 
         <!-- Modifier buttons (combinable — toggle freely) -->
@@ -191,11 +190,14 @@
           <button type="button" class="kbd-btn" onclick="pressNum('7')">7</button>
           <button type="button" class="kbd-btn" onclick="pressBar()" style="color:var(--muted);font-size:18px;font-weight:300">|</button>
           <button type="button" class="kbd-btn" onclick="deleteLast()" style="color:var(--muted)">⌫</button>
-          <button type="button" class="kbd-btn" onclick="clearSection()" style="color:var(--muted);font-size:12px">clr</button>
+          <button type="button" class="kbd-btn" onclick="clearSection()" style="color:var(--danger);font-size:12px;border-color:rgba(192,57,43,0.25);">clr</button>
         </div>
 
-        <div style="margin-top:6px;">
-          <button type="button" class="kbd-btn" onclick="pressDot()" style="flex:1;color:var(--muted);font-size:20px;">·</button>
+        <div style="margin-top:6px;display:flex;gap:6px;">
+          <button type="button" class="kbd-btn" onclick="pressDot()" style="flex:1;color:var(--muted);flex-direction:column;gap:2px;border-style:dashed;">
+            <span style="font-size:20px;line-height:1;">·</span>
+            <span style="font-size:10px;opacity:.6;">tahan</span>
+          </button>
           <button type="button" class="kbd-btn" onclick="pressEnter()" style="flex:2;color:var(--muted);font-size:13px;letter-spacing:1px;">↵ baris baru</button>
         </div>
 
@@ -445,10 +447,9 @@ function renderDisplay() {
       disp.appendChild(el)
     } else if (token === '.') {
       const el = document.createElement('span')
-      el.className = 'prog-bar'
+      el.className = 'prog-dot-chip'
       el.textContent = '·'
-      el.style.fontSize = '20px'
-      el.title = 'klik hapus'
+      el.title = 'tahan chord (klik hapus)'
       el.onclick = () => { sections[currentSec].splice(i, 1); renderDisplay() }
       disp.appendChild(el)
     } else {
