@@ -448,15 +448,23 @@ function render() {
 
 function renderChordSections() {
   const sections = song.sections || {}
-  const order = SECTION_ORDER.filter(s => sections[s] && sections[s].length > 0)
-  const extras = Object.keys(sections).filter(s => !SECTION_ORDER.includes(s) && sections[s].length > 0)
+
+  function hasContent(v) {
+    if (!v) return false
+    if (typeof v === 'string') return v.trim().length > 0
+    if (Array.isArray(v)) return v.length > 0
+    return false
+  }
+
+  const order = SECTION_ORDER.filter(s => hasContent(sections[s]))
+  const extras = Object.keys(sections).filter(s => !SECTION_ORDER.includes(s) && hasContent(sections[s]))
 
   if ([...order, ...extras].length === 0) {
     return '<div class="empty"><div class="empty-icon">🎸</div><div class="empty-title">Progresi chord belum tersedia.</div></div>'
   }
 
   return [...order, ...extras].map(secName => {
-    const data = sections[secName] || []
+    const data = sections[secName]
     return `
       <div class="chord-section">
         <div class="chord-section-name">${secName}</div>
@@ -467,25 +475,20 @@ function renderChordSections() {
 }
 
 function renderSectionLines(data) {
-  if (!data || data.length === 0) return ''
+  if (!data) return ''
 
-  // If first element is an array → multi-line format (legacy)
-  if (Array.isArray(data[0])) {
-    return data.map(line => `<div class="chord-line">${renderTokens(line)}</div>`).join('')
-  }
+  // Normalize to token array via supabase.js helper
+  const tokens = normalizeSectionTokens(data)
+  if (!tokens.length) return ''
 
-  // Flat array — split on '\n' for explicit line breaks, '|' for bar separators within a line
+  // Split on '\n' into lines
   const lines = []
-  let currentLine = []
-  for (const t of data) {
-    if (t === '\n') {
-      lines.push(currentLine)
-      currentLine = []
-    } else {
-      currentLine.push(t)
-    }
+  let cur = []
+  for (const t of tokens) {
+    if (t === '\n') { lines.push(cur); cur = [] }
+    else cur.push(t)
   }
-  lines.push(currentLine)
+  lines.push(cur)
 
   return lines
     .filter(line => line.length > 0)
@@ -499,14 +502,38 @@ function renderTokens(tokens) {
   return tokens.map(t => {
     if (t === '|') return '<span class="chord-sep">|</span>'
     if (t === '/') return '<span class="chord-sep">/</span>'
-    if (t === '.') return '<span class="chord-dot">·</span>'
-    if (t.startsWith('(')) return `<span class="chord-note">${t}</span>`
+    if (t === '.') return '<span class="chord-dot">\xB7</span>'
 
+    // Sinkopasi (kurung) — kuning amber
+    if (t.startsWith('(') && t.endsWith(')')) {
+      const inner = t.slice(1, -1)
+      const parts = splitPassingTokens(inner)
+      if (showAsNotes) {
+        const pills = parts.map(p => '<span class="passing-inner">' + tokenToChord(p, currentKeyIdx) + '</span>').join('')
+        return '<span class="chord-pill synco-pill">(' + pills + ')</span>'
+      } else {
+        const pills = parts.map(p => '<span class="passing-inner">' + p + '</span>').join('')
+        return '<span class="chord-pill synco-pill num-mode">(' + pills + ')</span>'
+      }
+    }
+
+    // Passing/rapat (tanpa kurung) — ungu
+    if (isPassingToken(t)) {
+      const parts = splitPassingTokens(t)
+      if (showAsNotes) {
+        const pills = parts.map(p => '<span class="passing-inner">' + tokenToChord(p, currentKeyIdx) + '</span>').join('')
+        return '<span class="chord-pill passing-pill">' + pills + '</span>'
+      } else {
+        const pills = parts.map(p => '<span class="passing-inner">' + p + '</span>').join('')
+        return '<span class="chord-pill passing-pill num-mode">' + pills + '</span>'
+      }
+    }
+
+    // Chord biasa
     if (showAsNotes) {
-      const chord = tokenToChord(t, currentKeyIdx)
-      return `<span class="chord-pill">${chord}</span>`
+      return '<span class="chord-pill">' + tokenToChord(t, currentKeyIdx) + '</span>'
     } else {
-      return `<span class="chord-pill num-mode">${t}</span>`
+      return '<span class="chord-pill num-mode">' + t + '</span>'
     }
   }).join(' ')
 }

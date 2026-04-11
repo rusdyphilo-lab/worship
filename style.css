@@ -416,8 +416,8 @@ nav {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 .chord-line:last-child { margin-bottom: 0; }
 /* Legacy .chord-row kept for compatibility */
@@ -425,7 +425,7 @@ nav {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   margin-bottom: 4px;
 }
 .chord-pill {
@@ -434,14 +434,58 @@ nav {
   justify-content: center;
   background: var(--accent-light);
   color: var(--accent);
-  border-radius: 6px;
-  padding: 6px 12px;
+  border-radius: 8px;
+  padding: 6px 14px;
   min-height: 36px;
   font-size: 15px;
   font-weight: 500;
 }
-.chord-sep { color: var(--hint); font-size: 13px; padding: 0 2px; }
+.chord-sep { color: var(--hint); font-size: 16px; padding: 0 2px; opacity: 0.5; }
 .chord-note { font-size: 12px; color: var(--hint); font-style: italic; }
+
+/* Passing/rapat chord group — ungu, chip rapat dalam satu bingkai */
+.passing-pill {
+  background: #ede9fe !important;
+  color: #5b21b6 !important;
+  border: 1px solid #c4b5fd !important;
+  padding: 4px 6px !important;
+  gap: 2px;
+  display: inline-flex;
+  align-items: center;
+}
+@media (prefers-color-scheme: dark) {
+  .passing-pill {
+    background: #1e1535 !important;
+    color: #a78bfa !important;
+    border-color: #5b21b6 !important;
+  }
+}
+/* Inner chip di dalam passing/synco group */
+.passing-inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(91,33,182,0.12);
+  border-radius: 5px;
+  padding: 2px 7px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+@media (prefers-color-scheme: dark) {
+  .passing-inner {
+    background: rgba(167,139,250,0.15);
+  }
+}
+/* Inner chip di dalam synco (kuning) */
+.synco-pill .passing-inner {
+  background: rgba(146,64,14,0.1);
+}
+@media (prefers-color-scheme: dark) {
+  .synco-pill .passing-inner {
+    background: rgba(252,211,77,0.1);
+  }
+}
 
 /* ============================================================
    LYRICS
