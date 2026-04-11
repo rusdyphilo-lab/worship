@@ -418,7 +418,7 @@ function renderDisplay() {
   const prog = sections[currentSec] || []
   const disp = document.getElementById('prog-display')
   const ph = document.getElementById('prog-placeholder')
-  disp.querySelectorAll('.prog-chip,.prog-sep-chip,.prog-newline,.prog-bar,.prog-linebreak').forEach(e => e.remove())
+  disp.querySelectorAll('.prog-chip,.prog-sep-chip,.prog-newline,.prog-bar,.prog-linebreak,.prog-dot-chip').forEach(e => e.remove())
   // Remove any leftover <br> tags
   disp.querySelectorAll('br').forEach(e => e.remove())
 
