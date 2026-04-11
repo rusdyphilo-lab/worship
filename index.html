@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Worship App</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand">Worship</a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link active">Lagu</a>
+    <a href="setlist.html" class="nav-link">Setlist</a>
+    <a href="admin.html" class="nav-link">Admin</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- JOB #7 — SVG search icon inline -->
+  <div class="search-wrap">
+    <span class="search-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </span>
+    <input class="search-input" id="search" type="text" placeholder="Cari judul lagu..." autocomplete="off" />
+  </div>
+
+  <!-- JOB #8 — Song counter -->
+  <div class="song-counter" id="song-counter"></div>
+
+  <!-- Filter chips: song type, genre, tempo only -->
+  <div class="filter-row" id="filter-row" style="display:none">
+    <button class="filter-chip active" onclick="setFilter('all','all',this)">Semua</button>
+    <div id="type-chips"></div>
+    <div id="genre-chips"></div>
+    <div id="tempo-chips"></div>
+  </div>
+
+  <!-- Song list -->
+  <div id="song-list">
+    <!-- JOB #10 — Skeleton loading -->
+    <div class="skeleton-card"><div class="skeleton-line skeleton-title"></div><div class="skeleton-line skeleton-sub"></div></div>
+    <div class="skeleton-card"><div class="skeleton-line skeleton-title"></div><div class="skeleton-line skeleton-sub"></div></div>
+    <div class="skeleton-card"><div class="skeleton-line skeleton-title"></div><div class="skeleton-line skeleton-sub"></div></div>
+    <div class="skeleton-card"><div class="skeleton-line skeleton-title"></div><div class="skeleton-line skeleton-sub"></div></div>
+    <div class="skeleton-card"><div class="skeleton-line skeleton-title"></div><div class="skeleton-line skeleton-sub"></div></div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="supabase.js"></script>
+<script>
+let allSongs = []
+let activeFilterCat = 'all'
+let activeFilterVal = 'all'
+
+async function loadSongs() {
+  const { data, error } = await db
+    .from('songs')
+    .select('id, title, default_key, song_type, genre, tempo, notes')
+    .order('title')
+
+  if (error) {
+    document.getElementById('song-list').innerHTML = renderEmpty(
+      '⚠️', 'Gagal memuat lagu', 'Periksa koneksi dan coba lagi.'
+    )
+    return
+  }
+  allSongs = data || []
+  buildFilters()
+  renderList(allSongs)
+  updateCounter(allSongs.length, allSongs.length)
+}
+
+function buildFilters() {
+  const types  = [...new Set(allSongs.map(s => s.song_type).filter(Boolean))].sort()
+  const genres = [...new Set(allSongs.map(s => s.genre).filter(Boolean))].sort()
+  const tempos = [...new Set(allSongs.map(s => s.tempo).filter(Boolean))].sort()
+
+  if (!types.length && !genres.length && !tempos.length) return
+
+  document.getElementById('type-chips').innerHTML = types.map(t =>
+    `<button class="filter-chip" onclick="setFilter('type','${escapeHtml(t)}',this)">🎼 ${escapeHtml(t)}</button>`
+  ).join('')
+
+  document.getElementById('genre-chips').innerHTML = genres.map(g =>
+    `<button class="filter-chip" onclick="setFilter('genre','${escapeHtml(g)}',this)">✦ ${escapeHtml(g)}</button>`
+  ).join('')
+
+  document.getElementById('tempo-chips').innerHTML = tempos.map(t =>
+    `<button class="filter-chip" onclick="setFilter('tempo','${escapeHtml(t)}',this)">♩ ${escapeHtml(t)}</button>`
+  ).join('')
+
+  document.getElementById('filter-row').style.display = 'flex'
+}
+
+function setFilter(cat, val, btn) {
+  document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'))
+  btn.classList.add('active')
+  activeFilterCat = cat
+  activeFilterVal = val
+  const q = document.getElementById('search').value.toLowerCase().trim()
+  applyFilters(q)
+}
+
+function applyFilters(q) {
+  let filtered = allSongs
+
+  if (q) filtered = filtered.filter(s => s.title.toLowerCase().includes(q))
+
+  if (activeFilterCat !== 'all') {
+    if (activeFilterCat === 'type')  filtered = filtered.filter(s => s.song_type === activeFilterVal)
+    if (activeFilterCat === 'genre') filtered = filtered.filter(s => s.genre === activeFilterVal)
+    if (activeFilterCat === 'tempo') filtered = filtered.filter(s => s.tempo === activeFilterVal)
+  }
+
+  renderList(filtered)
+  updateCounter(filtered.length, allSongs.length)
+}
+
+// JOB #8 — Counter display
+function updateCounter(shown, total) {
+  const el = document.getElementById('song-counter')
+  if (shown === total) {
+    el.textContent = `${total} lagu`
+  } else {
+    el.textContent = `${shown} dari ${total} lagu`
+  }
+}
+
+function renderList(songs) {
+  const el = document.getElementById('song-list')
+  if (!songs.length) {
+    const q = document.getElementById('search').value.trim()
+    // JOB #15 — Helpful empty state
+    el.innerHTML = renderEmpty(
+      '🔍',
+      q ? `Tidak ada lagu "${q}"` : 'Tidak ada lagu ditemukan',
+      q ? 'Coba kata kunci lain.' : '',
+      q ? `<button class="btn" style="margin-top:0.75rem" onclick="document.getElementById('search').value='';applyFilters('')">Reset Pencarian</button>` : ''
+    )
+    return
+  }
+  el.innerHTML = songs.map(s => {
+    const meta = [s.song_type, s.genre, s.tempo].filter(Boolean).join(' · ')
+    const sub = meta || s.notes || 'Ketuk untuk lihat chord & lirik'
+    return `
+    <a class="card" href="song.html?id=${s.id}">
+      <div class="card-row">
+        <div>
+          <div class="card-title">${escapeHtml(s.title)}</div>
+          <div class="card-sub">${escapeHtml(sub)}</div>
+        </div>
+        <span class="card-badge">${escapeHtml(s.default_key || '—')}</span>
+      </div>
+    </a>`
+  }).join('')
+}
+
+// JOB #15 — Reusable empty state renderer
+function renderEmpty(icon, title, sub, extra = '') {
+  return `<div class="empty">
+    <div class="empty-icon">${icon}</div>
+    <div class="empty-title">${title}</div>
+    ${sub ? `<div class="empty-sub">${sub}</div>` : ''}
+    ${extra}
+  </div>`
+}
+
+function escapeHtml(str) {
+  if (!str) return ''
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+}
+
+document.getElementById('search').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase().trim()
+  applyFilters(q)
+})
+
+loadSongs()
+</script>
+</body>
+</html>

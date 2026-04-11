@@ -1,0 +1,929 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500&display=swap');
+
+/* ============================================================
+   MOBILE-FIRST WORSHIP APP
+   Base = mobile (320px+), scale up via min-width
+   ============================================================ */
+
+:root {
+  --bg: #f7f5f0;
+  --surface: #ffffff;
+  --border: rgba(0,0,0,0.1);
+  --text: #1a1a1a;
+  --muted: #6b6b6b;
+  --hint: #aaaaaa;
+  --accent: #2d5a3d;
+  --accent-light: #e8f0eb;
+  --accent-pressed: #234a31;
+  --danger: #c0392b;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* ============================================================
+   JOB #2 — DARK MODE (prefers-color-scheme)
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111210;
+    --surface: #1c1e1b;
+    --border: rgba(255,255,255,0.1);
+    --text: #e8e6e0;
+    --muted: #9a9a9a;
+    --hint: #5a5a5a;
+    --accent: #5a9e72;
+    --accent-light: #1e2f23;
+    --accent-pressed: #4a8860;
+    --danger: #e05c4b;
+  }
+  nav { background: rgba(28,30,27,0.92); }
+  .input-field { background: #111210; }
+  .input-field:focus { background: #1c1e1b; }
+  .kbd-wrap, .chord-section, .setlist-card, .lyrics-block,
+  .key-controls, .song-header { background: var(--surface); }
+  .prog-display, .t-btn, .key-btn, .kbd-btn, .mod-btn,
+  .btn:not(.btn-primary):not(.btn-danger) { background: #111210; }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-size: 15px;
+  line-height: 1.6;
+  overscroll-behavior-y: contain;
+  padding-bottom: var(--safe-bottom);
+}
+
+/* ============================================================
+   NAV — sticky, safe-area aware, touch-friendly
+   ============================================================ */
+nav {
+  background: rgba(255,255,255,0.92);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 calc(0.75rem + var(--safe-left)) 0 calc(0.75rem + var(--safe-right));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-brand {
+  font-family: 'Instrument Serif', serif;
+  font-size: 20px;
+  color: var(--accent);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.nav-links {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.nav-links::-webkit-scrollbar { display: none; }
+
+.nav-link {
+  padding: 8px 14px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.nav-link:active { background: var(--accent-light); color: var(--accent); }
+.nav-link.active { background: var(--accent-light); color: var(--accent); font-weight: 500; }
+
+/* ============================================================
+   LAYOUT — fluid, safe-area padded
+   ============================================================ */
+.container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 1rem calc(1rem + var(--safe-left)) calc(1rem + var(--safe-bottom)) calc(1rem + var(--safe-right));
+}
+
+/* ============================================================
+   SEARCH — 48px touch target, 16px font prevents iOS zoom
+   ============================================================ */
+.search-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0.5rem;
+}
+.search-icon { color: var(--hint); font-size: 16px; flex-shrink: 0; display: flex; align-items: center; }
+.search-input {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text);
+  width: 100%;
+  height: 48px;
+  outline: none;
+  touch-action: manipulation;
+}
+.search-input::placeholder { color: var(--hint); }
+
+/* JOB #8 — Song counter below search */
+.song-counter {
+  font-size: 12px;
+  color: var(--hint);
+  text-align: right;
+  margin-bottom: 0.75rem;
+  padding-right: 2px;
+}
+
+/* ============================================================
+   CARDS — touch feedback with scale
+   ============================================================ */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.15s, transform 0.1s;
+  text-decoration: none;
+  display: block;
+  color: inherit;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  min-height: 48px;
+}
+.card:active {
+  background: var(--bg);
+  transform: scale(0.985);
+}
+.card-title { font-size: 16px; font-weight: 500; margin-bottom: 2px; }
+/* JOB #6 — Truncate card subtitle to 1 line */
+.card-sub {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.card-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+/* JOB #6 — Allow card-title area to shrink so badge stays visible */
+.card-row > div:first-child { min-width: 0; flex: 1; }
+.card-badge {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--accent-light);
+  color: var(--accent);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   SECTION LABEL
+   ============================================================ */
+.section-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--hint);
+  font-weight: 500;
+  margin-bottom: 8px;
+  margin-top: 1.5rem;
+}
+.section-label:first-child { margin-top: 0; }
+
+/* ============================================================
+   FILTER CHIPS — JOB #11
+   ============================================================ */
+.filter-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.filter-chip {
+  padding: 6px 14px;
+  min-height: 36px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 20px;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  color: var(--muted);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  white-space: nowrap;
+}
+.filter-chip:active { background: var(--accent-light); color: var(--accent); }
+.filter-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ============================================================
+   TABS — min 44px height
+   ============================================================ */
+.tab-row {
+  display: flex;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+  margin-bottom: 1.25rem;
+}
+.tab-btn {
+  flex: 1;
+  padding: 10px 6px;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  color: var(--muted);
+  transition: background 0.15s, color 0.15s;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tab-btn:active { background: var(--bg); }
+.tab-btn.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 500;
+}
+.tab-btn.active:active { background: var(--accent-pressed); }
+
+/* ============================================================
+   SONG DETAIL
+   ============================================================ */
+.song-header {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1rem;
+  margin-bottom: 1rem;
+}
+.song-header-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 24px;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+.song-header-meta { font-size: 13px; color: var(--muted); }
+
+/* ============================================================
+   KEY SELECTOR — 44px touch targets
+   ============================================================ */
+.key-controls {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+.transpose-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.t-btn {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  transition: background 0.1s, transform 0.1s;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.t-btn:active {
+  background: var(--accent-light);
+  transform: scale(0.92);
+}
+.current-key {
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px;
+  min-width: 40px;
+  text-align: center;
+  color: var(--accent);
+}
+.key-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.key-btn {
+  padding: 0;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  color: var(--text);
+  transition: background 0.1s, color 0.1s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.key-btn:active {
+  background: var(--accent-light);
+  transform: scale(0.92);
+}
+.key-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* ============================================================
+   CHORD DISPLAY — JOB #1: Per-line rendering
+   ============================================================ */
+.chord-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 8px;
+}
+.chord-section-name {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--hint);
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+/* Each "line" of chords is its own row */
+.chord-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.chord-line:last-child { margin-bottom: 0; }
+/* Legacy .chord-row kept for compatibility */
+.chord-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.chord-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-light);
+  color: var(--accent);
+  border-radius: 6px;
+  padding: 6px 12px;
+  min-height: 36px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.chord-sep { color: var(--hint); font-size: 13px; padding: 0 2px; }
+.chord-note { font-size: 12px; color: var(--hint); font-style: italic; }
+
+/* ============================================================
+   LYRICS
+   ============================================================ */
+.lyrics-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1rem;
+  white-space: pre-wrap;
+  font-size: 15px;
+  line-height: 2;
+  color: var(--text);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  word-break: break-word;
+}
+
+/* ============================================================
+   SETLIST
+   ============================================================ */
+.setlist-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+/* JOB #9 — Highlight setlist minggu ini */
+.setlist-card.this-week {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+.setlist-this-week-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-light);
+  border-radius: 20px;
+  padding: 2px 8px;
+  margin-top: 4px;
+}
+.setlist-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.setlist-title { font-weight: 500; font-size: 15px; word-break: break-word; }
+.setlist-date { font-size: 13px; color: var(--muted); }
+.setlist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 1rem;
+  min-height: 52px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.1s, transform 0.1s;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.setlist-item:last-child { border-bottom: none; }
+.setlist-item:active {
+  background: var(--bg);
+  transform: scale(0.985);
+}
+.setlist-num { font-size: 13px; color: var(--hint); min-width: 20px; flex-shrink: 0; }
+.setlist-info { flex: 1; min-width: 0; }
+.setlist-song { font-size: 15px; font-weight: 500; word-break: break-word; }
+.setlist-key { font-size: 13px; color: var(--muted); }
+.setlist-arrow { color: var(--hint); font-size: 18px; flex-shrink: 0; }
+
+/* JOB #12 — Share button */
+.setlist-share-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.1s, color 0.1s;
+  flex-shrink: 0;
+}
+.setlist-share-btn:active { background: var(--accent-light); color: var(--accent); }
+
+/* ============================================================
+   ADMIN — INPUT (16px font prevents iOS zoom)
+   ============================================================ */
+.input-field {
+  width: 100%;
+  padding: 12px;
+  min-height: 48px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  outline: none;
+  transition: border-color 0.15s;
+  touch-action: manipulation;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.input-field:focus { border-color: var(--accent); background: var(--surface); }
+
+.form-group { margin-bottom: 1rem; }
+.form-label { font-size: 13px; color: var(--muted); margin-bottom: 6px; display: block; font-weight: 500; }
+
+/* ============================================================
+   CHORD KEYBOARD — 48px num buttons, 44px mod buttons
+   ============================================================ */
+.kbd-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+.prog-display {
+  min-height: 52px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  cursor: default;
+  -webkit-overflow-scrolling: touch;
+}
+.prog-placeholder { font-size: 14px; color: var(--hint); }
+.prog-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border: 1px solid rgba(45,90,61,0.2);
+  border-radius: 6px;
+  padding: 6px 10px;
+  min-height: 36px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.1s, transform 0.1s;
+}
+.prog-chip:active { background: #d5e5d9; transform: scale(0.92); }
+.prog-chip-del { font-size: 11px; color: var(--accent); opacity: 0.6; }
+.prog-sep-chip {
+  font-size: 13px;
+  color: var(--hint);
+  cursor: pointer;
+  padding: 4px;
+  min-width: 24px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+/* Newline token */
+.prog-newline {
+  font-size: 11px;
+  color: var(--hint);
+  cursor: pointer;
+  opacity: 0.5;
+  padding: 2px 4px;
+  touch-action: manipulation;
+  align-self: center;
+}
+
+/* Full-width line break inside prog-display */
+.prog-linebreak {
+  width: 100%;
+  height: 0;
+}
+
+/* Bar line | separator */
+.prog-bar {
+  font-size: 20px;
+  font-weight: 200;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 4px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  touch-action: manipulation;
+  opacity: 0.5;
+}
+.prog-bar:hover { opacity: 1; }
+
+.num-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.mod-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.kbd-btn {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  padding: 0;
+  min-height: 48px;
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, color 0.1s, transform 0.08s;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.kbd-btn:active {
+  background: var(--accent-light);
+  color: var(--accent);
+  transform: scale(0.92);
+}
+.mod-btn {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--muted);
+  padding: 0;
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  transition: background 0.1s, color 0.1s, transform 0.08s;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.mod-btn:active {
+  background: var(--accent-light);
+  transform: scale(0.92);
+}
+.mod-btn.active-mod { background: var(--accent); color: #fff; border-color: var(--accent); }
+.mod-btn.active-mod:active { background: var(--accent-pressed); }
+
+.sec-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.sec-tab {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--muted);
+  padding: 8px 16px;
+  min-height: 40px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, transform 0.1s;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  display: flex;
+  align-items: center;
+}
+.sec-tab:active { background: var(--accent-light); transform: scale(0.95); }
+.sec-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.sec-tab.active:active { background: var(--accent-pressed); }
+
+.hint-text { font-size: 12px; color: var(--hint); margin-top: 6px; }
+
+/* ============================================================
+   BUTTONS — 44px+ height
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 20px;
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.15s, transform 0.1s;
+  text-decoration: none;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.btn:active { background: var(--accent-light); color: var(--accent); transform: scale(0.96); }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:active { background: var(--accent-pressed); color: #fff; transform: scale(0.96); }
+.btn-danger { background: transparent; color: var(--danger); border-color: rgba(192,57,43,0.3); }
+.btn-danger:active { background: #fdf0ef; transform: scale(0.96); }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 1rem; }
+
+/* ============================================================
+   TOAST — safe-area aware
+   ============================================================ */
+.toast {
+  position: fixed;
+  bottom: calc(1.5rem + var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--text);
+  color: var(--bg);
+  padding: 12px 24px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  z-index: 999;
+  transition: transform 0.3s;
+  white-space: nowrap;
+  max-width: calc(100vw - 2rem);
+  text-align: center;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ============================================================
+   EMPTY & LOADING — JOB #15: More helpful empty state
+   ============================================================ */
+.empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--hint);
+  font-size: 14px;
+}
+.empty-icon { font-size: 32px; margin-bottom: 0.5rem; }
+.empty-title { font-size: 15px; font-weight: 500; color: var(--muted); margin-bottom: 4px; }
+.empty-sub { font-size: 13px; color: var(--hint); margin-bottom: 1rem; }
+.loading { text-align: center; padding: 2rem; color: var(--hint); font-size: 14px; }
+
+/* JOB #10 — Skeleton loading shimmer */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 8px;
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.skeleton-line {
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--border) 25%, var(--bg) 50%, var(--border) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite;
+}
+.skeleton-title { height: 16px; width: 60%; }
+.skeleton-sub { height: 12px; width: 40%; }
+
+/* ============================================================
+   SERVICE TYPE BADGE
+   ============================================================ */
+.type-badge {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.type-subuh { background: #fff3e0; color: #e65100; }
+.type-minggu-pagi { background: #e8f5e9; color: #2e7d32; }
+.type-minggu-siang { background: #e3f2fd; color: #1565c0; }
+.type-rabu { background: #f3e5f5; color: #6a1b9a; }
+
+/* ============================================================
+   RESPONSIVE — MOBILE-FIRST (scale UP)
+   ============================================================ */
+
+/* JOB #3 — Key bar 2 baris di HP kecil (<375px) */
+@media (max-width: 374px) {
+  .container { padding: 0.75rem; }
+  .song-header-title { font-size: 20px; }
+  .current-key { font-size: 22px; }
+  .key-grid { grid-template-columns: repeat(4, 1fr); }
+  .num-grid { gap: 4px; }
+  .mod-grid { gap: 4px; }
+  .nav-link { padding: 8px 10px; font-size: 13px; }
+  .chord-pill { padding: 4px 8px; font-size: 14px; }
+  .tab-btn { font-size: 13px; padding: 8px 4px; }
+  /* Key bar wraps to 2 rows on tiny phones */
+  .key-bar {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px;
+  }
+  .key-bar-spacer { display: none; }
+  .toggle-wrap { margin-left: 0; }
+  .font-bar { margin-left: auto; }
+}
+
+/* Tablet (768px+) */
+@media (min-width: 768px) {
+  .container { padding: 2rem 1.5rem; }
+  nav { padding: 0 1.5rem; }
+  .card { padding: 1rem 1.25rem; }
+  .song-header { padding: 1.5rem; }
+  .song-header-title { font-size: 28px; }
+  .chord-section { padding: 1.25rem; }
+  .key-grid { gap: 8px; }
+  .kbd-wrap { padding: 1.25rem; }
+  .lyrics-block { padding: 1.5rem; }
+  .setlist-header { padding: 1.25rem; }
+  .setlist-item { padding: 14px 1.25rem; }
+}
+
+/* Desktop (1024px+) — hover states only here */
+@media (min-width: 1024px) {
+  .container { padding: 2rem; }
+  .nav-link:hover { background: var(--bg); color: var(--text); }
+  .card:hover { border-color: rgba(0,0,0,0.2); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .t-btn:hover { background: var(--accent-light); }
+  .key-btn:hover { background: var(--accent-light); }
+  .kbd-btn:hover { background: var(--accent-light); color: var(--accent); }
+  .mod-btn:hover { background: var(--accent-light); }
+  .btn:hover { background: var(--accent-light); color: var(--accent); }
+  .btn-primary:hover { background: var(--accent-pressed); color: #fff; }
+  .btn-danger:hover { background: #fdf0ef; }
+  .setlist-item:hover { background: var(--bg); }
+  .prog-chip:hover { background: #d5e5d9; }
+  .sec-tab:hover { background: var(--accent-light); }
+  .filter-chip:hover { background: var(--accent-light); color: var(--accent); }
+  .setlist-share-btn:hover { background: var(--accent-light); color: var(--accent); }
+}
+
+/* ============================================================
+   ACCESSIBILITY — respect reduced motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

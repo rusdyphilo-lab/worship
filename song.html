@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detail Lagu</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ============================================================
+       SONG PAGE — compact mobile-first overrides
+       ============================================================ */
+
+    .song-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 1rem;
+    }
+    .song-top-info { flex: 1; min-width: 0; }
+    .song-top-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 22px;
+      word-break: break-word;
+      line-height: 1.3;
+    }
+    /* JOB #5 — Remove default_key from meta */
+    .song-top-meta {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .song-top-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      color: var(--muted);
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: background 0.1s, transform 0.1s;
+    }
+    .icon-btn:active {
+      background: var(--accent-light);
+      transform: scale(0.92);
+    }
+
+    /* JOB #13 — Wake Lock indicator */
+    .icon-btn.wake-active {
+      background: var(--accent-light);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* Compact key controls — single row */
+    .key-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px 10px;
+      margin-bottom: 1rem;
+    }
+    .key-bar-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--hint);
+      font-weight: 500;
+    }
+    .key-bar .t-btn {
+      width: 36px;
+      height: 36px;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .key-bar .current-key {
+      font-size: 22px;
+      min-width: 32px;
+    }
+    .key-bar-spacer { flex: 1; }
+
+    /* Toggle switch */
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .toggle-track {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      background: var(--border);
+      border-radius: 10px;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle-track.on {
+      background: var(--accent);
+    }
+    .toggle-thumb {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      pointer-events: none;
+    }
+    .toggle-track.on .toggle-thumb {
+      transform: translateX(16px);
+    }
+
+    /* Font size control */
+    .font-bar {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .font-btn {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: background 0.1s, transform 0.1s;
+    }
+    .font-btn:active {
+      background: var(--accent-light);
+      transform: scale(0.9);
+    }
+
+    /* Chord sections — dynamic font size */
+    .chord-sections-wrap {
+      --chord-size: 15px;
+    }
+    .chord-sections-wrap .chord-pill {
+      font-size: var(--chord-size);
+      padding: 4px 10px;
+      min-height: 32px;
+    }
+    .chord-sections-wrap .chord-section {
+      padding: 12px;
+      margin-bottom: 6px;
+    }
+    .chord-sections-wrap .chord-line {
+      gap: 5px;
+    }
+
+    /* Dot token — hold/sustain */
+    .chord-dot {
+      font-size: 22px;
+      color: var(--muted);
+      line-height: 1;
+      padding: 0 2px;
+      opacity: 0.5;
+    }
+    .chord-pill.num-mode {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    /* Lyrics with dynamic font */
+    .lyrics-wrap {
+      --lyric-size: 15px;
+    }
+    .lyrics-wrap .lyrics-block {
+      font-size: var(--lyric-size);
+    }
+
+    /* JOB #14 — Prev/Next navigation */
+    .song-nav {
+      display: flex;
+      gap: 8px;
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+    .song-nav-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--text);
+      touch-action: manipulation;
+      transition: background 0.1s, transform 0.1s;
+      min-height: 52px;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .song-nav-btn:active { background: var(--bg); transform: scale(0.98); }
+    .song-nav-btn.next { flex-direction: row-reverse; text-align: right; }
+    .song-nav-arrow { font-size: 20px; color: var(--hint); flex-shrink: 0; }
+    .song-nav-info { min-width: 0; flex: 1; }
+    .song-nav-label { font-size: 11px; color: var(--hint); text-transform: uppercase; letter-spacing: 0.06em; }
+    .song-nav-title { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand">Worship</a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Lagu</a>
+    <a href="setlist.html" class="nav-link">Setlist</a>
+    <a href="admin.html" class="nav-link">Admin</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div id="content">
+    <!-- Skeleton while loading -->
+    <div style="margin-bottom:1rem">
+      <div class="skeleton-card" style="min-height:70px"><div class="skeleton-line skeleton-title" style="width:50%"></div><div class="skeleton-line skeleton-sub" style="width:30%"></div></div>
+    </div>
+    <div class="skeleton-card"><div class="skeleton-line skeleton-title"></div></div>
+    <div class="skeleton-card" style="min-height:120px"><div class="skeleton-line skeleton-title" style="width:20%"></div></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="supabase.js"></script>
+<script>
+const SECTION_ORDER = ['Intro','Verse','Reff','Bridge','Outro','Persembahan']
+let song = null
+let navList = []
+let currentKeyIdx = 0
+let currentTab = 'chord'
+let showAsNotes = true
+let chordSize = 15
+let lyricSize = 15
+let wakeLock = null  // JOB #13
+
+const params = new URLSearchParams(location.search)
+const songId = params.get('id')
+const urlKey = params.get('key')
+const serviceId = params.get('service')  // set if opened from setlist
+
+// Navigation list: either setlist order or alphabetical
+// navList already declared above
+
+async function loadNavList() {
+  if (serviceId) {
+    // Load setlist order for this service
+    const { data } = await db
+      .from('setlist_items')
+      .select('position, key_used, songs(id, title)')
+      .eq('service_id', serviceId)
+      .order('position')
+    if (data && data.length > 0) {
+      navList = data.map(item => ({ id: item.songs.id, title: item.songs.title, key: item.key_used }))
+      return
+    }
+  }
+  // Fallback: alphabetical
+  const { data } = await db.from('songs').select('id, title').order('title')
+  navList = data || []
+}
+
+async function loadSong() {
+  if (!songId) { location.href = 'index.html'; return }
+
+  await loadNavList()
+
+  const { data, error } = await db
+    .from('songs')
+    .select('*')
+    .eq('id', songId)
+    .single()
+
+  if (error || !data) {
+    document.getElementById('content').innerHTML =
+      '<div class="empty"><div class="empty-icon">🎵</div><div class="empty-title">Lagu tidak ditemukan.</div><div class="empty-sub"><a href="index.html">Kembali ke library</a></div></div>'
+    return
+  }
+
+  song = data
+  document.title = song.title + ' — Worship App'
+
+  if (urlKey) {
+    const idx = keyIndex(urlKey)
+    currentKeyIdx = idx >= 0 ? idx : keyIndex(song.default_key || 'C')
+  } else {
+    currentKeyIdx = keyIndex(song.default_key || 'C')
+  }
+
+  render()
+}
+
+function render() {
+  const el = document.getElementById('content')
+  // JOB #5 — meta: song_type, genre, tempo, notes
+  const meta = [song.song_type, song.genre, song.tempo, song.notes].filter(Boolean).join(' · ')
+
+  // JOB #4 — Show tab only if lyrics exist
+  const hasLyrics = song.lyrics && song.lyrics.trim().length > 0
+  if (!hasLyrics && currentTab === 'lyric') currentTab = 'chord'
+
+  // Nav: prev/next from navList (setlist order or alphabetical)
+  const currentIdx = navList.findIndex(s => s.id === songId)
+  const prevSong = currentIdx > 0 ? navList[currentIdx - 1] : null
+  const nextSong = currentIdx < navList.length - 1 ? navList[currentIdx + 1] : null
+  const serviceParam = serviceId ? `&service=${serviceId}` : ''
+
+  el.innerHTML = `
+    <!-- Header: title + wake lock + edit -->
+    <div class="song-top">
+      <div class="song-top-info">
+        <div class="song-top-title">${escapeHtml(song.title)}</div>
+        ${meta ? `<div class="song-top-meta">${escapeHtml(meta)}</div>` : ''}
+      </div>
+      <div class="song-top-actions">
+        <!-- JOB #13 — Wake Lock button -->
+        <button class="icon-btn" id="wake-btn" onclick="toggleWakeLock()" title="Cegah layar mati">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><circle cx="12" cy="9" r="2.5"/>
+          </svg>
+        </button>
+        <button class="icon-btn" onclick="location.href='admin.html?edit=${song.id}'" title="Edit lagu">&#9998;</button>
+      </div>
+    </div>
+
+    <!-- JOB #4 — Tab only if lyrics exist -->
+    ${hasLyrics ? `
+    <div class="tab-row">
+      <button class="tab-btn ${currentTab==='chord'?'active':''}" onclick="switchTab('chord')">Chord</button>
+      <button class="tab-btn ${currentTab==='lyric'?'active':''}" onclick="switchTab('lyric')">Lirik</button>
+    </div>` : ''}
+
+    <!-- CHORD TAB -->
+    <div id="tab-chord" style="display:${currentTab==='chord'?'block':'none'}">
+      <!-- JOB #3 — key bar wraps on tiny phones via CSS -->
+      <div class="key-bar">
+        <span class="key-bar-label">Key</span>
+        <button class="t-btn" onclick="transpose(-1)">−</button>
+        <div class="current-key" id="cur-key">${KEYS[currentKeyIdx]}</div>
+        <button class="t-btn" onclick="transpose(+1)">+</button>
+
+        <div class="key-bar-spacer"></div>
+
+        <!-- Angka / Nada toggle -->
+        <div class="toggle-wrap" onclick="toggleMode()">
+          <span id="mode-label">${showAsNotes ? 'Nada' : 'Angka'}</span>
+          <div class="toggle-track ${showAsNotes ? 'on' : ''}" id="mode-toggle">
+            <div class="toggle-thumb"></div>
+          </div>
+        </div>
+
+        <!-- Font size -->
+        <div class="font-bar">
+          <button class="font-btn" onclick="changeSize(-1)">A−</button>
+          <button class="font-btn" onclick="changeSize(+1)">A+</button>
+        </div>
+      </div>
+
+      <div class="chord-sections-wrap" id="chord-sections-wrap" style="--chord-size:${chordSize}px">
+        ${renderChordSections()}
+      </div>
+    </div>
+
+    <!-- LYRIC TAB -->
+    ${hasLyrics ? `
+    <div id="tab-lyric" style="display:${currentTab==='lyric'?'block':'none'}">
+      <div class="key-bar" style="margin-bottom:1rem;">
+        <div class="key-bar-spacer"></div>
+        <div class="font-bar">
+          <button class="font-btn" onclick="changeLyricSize(-1)">A−</button>
+          <button class="font-btn" onclick="changeLyricSize(+1)">A+</button>
+        </div>
+      </div>
+      <div class="lyrics-wrap" id="lyrics-wrap" style="--lyric-size:${lyricSize}px">
+        <div class="lyrics-block">${escapeHtml(song.lyrics)}</div>
+      </div>
+    </div>` : ''}
+
+    <!-- Prev/Next navigation -->
+    <div class="song-nav">
+      ${prevSong
+        ? `<a class="song-nav-btn" href="song.html?id=${prevSong.id}${serviceParam}">
+            <span class="song-nav-arrow">‹</span>
+            <div class="song-nav-info">
+              <div class="song-nav-label">Sebelumnya</div>
+              <div class="song-nav-title">${escapeHtml(prevSong.title)}</div>
+            </div>
+           </a>`
+        : '<div style="flex:1"></div>'
+      }
+      ${nextSong
+        ? `<a class="song-nav-btn next" href="song.html?id=${nextSong.id}${serviceParam}">
+            <span class="song-nav-arrow">›</span>
+            <div class="song-nav-info">
+              <div class="song-nav-label">Selanjutnya</div>
+              <div class="song-nav-title">${escapeHtml(nextSong.title)}</div>
+            </div>
+           </a>`
+        : '<div style="flex:1"></div>'
+      }
+    </div>
+  `
+}
+
+// ============================================================
+// JOB #1 — CHORD RENDERING PER BARIS
+// Sections stored as array-of-arrays (lines) or flat array
+// ============================================================
+
+function renderChordSections() {
+  const sections = song.sections || {}
+  const order = SECTION_ORDER.filter(s => sections[s] && sections[s].length > 0)
+  const extras = Object.keys(sections).filter(s => !SECTION_ORDER.includes(s) && sections[s].length > 0)
+
+  if ([...order, ...extras].length === 0) {
+    return '<div class="empty"><div class="empty-icon">🎸</div><div class="empty-title">Progresi chord belum tersedia.</div></div>'
+  }
+
+  return [...order, ...extras].map(secName => {
+    const data = sections[secName] || []
+    return `
+      <div class="chord-section">
+        <div class="chord-section-name">${secName}</div>
+        ${renderSectionLines(data)}
+      </div>
+    `
+  }).join('')
+}
+
+function renderSectionLines(data) {
+  if (!data || data.length === 0) return ''
+
+  // If first element is an array → multi-line format (legacy)
+  if (Array.isArray(data[0])) {
+    return data.map(line => `<div class="chord-line">${renderTokens(line)}</div>`).join('')
+  }
+
+  // Flat array — split on '\n' for explicit line breaks, '|' for bar separators within a line
+  const lines = []
+  let currentLine = []
+  for (const t of data) {
+    if (t === '\n') {
+      lines.push(currentLine)
+      currentLine = []
+    } else {
+      currentLine.push(t)
+    }
+  }
+  lines.push(currentLine)
+
+  return lines
+    .filter(line => line.length > 0)
+    .map(line => `<div class="chord-line">${renderTokens(line)}</div>`)
+    .join('')
+}
+
+function renderTokens(tokens) {
+  if (!tokens || tokens.length === 0) return ''
+
+  return tokens.map(t => {
+    if (t === '|') return '<span class="chord-sep">|</span>'
+    if (t === '/') return '<span class="chord-sep">/</span>'
+    if (t === '.') return '<span class="chord-dot">·</span>'
+    if (t.startsWith('(')) return `<span class="chord-note">${t}</span>`
+
+    if (showAsNotes) {
+      const chord = tokenToChord(t, currentKeyIdx)
+      return `<span class="chord-pill">${chord}</span>`
+    } else {
+      return `<span class="chord-pill num-mode">${t}</span>`
+    }
+  }).join(' ')
+}
+
+// ============================================================
+// CONTROLS
+// ============================================================
+
+function transpose(delta) {
+  currentKeyIdx = (currentKeyIdx + delta + 12) % 12
+  updateChords()
+}
+
+function updateChords() {
+  const curKeyEl = document.getElementById('cur-key')
+  if (curKeyEl) curKeyEl.textContent = KEYS[currentKeyIdx]
+  const wrap = document.getElementById('chord-sections-wrap')
+  if (wrap) wrap.innerHTML = renderChordSections()
+}
+
+function toggleMode() {
+  showAsNotes = !showAsNotes
+  const label = document.getElementById('mode-label')
+  const toggle = document.getElementById('mode-toggle')
+  if (label) label.textContent = showAsNotes ? 'Nada' : 'Angka'
+  if (toggle) toggle.classList.toggle('on', showAsNotes)
+  updateChords()
+}
+
+function changeSize(delta) {
+  chordSize = Math.max(12, Math.min(28, chordSize + delta * 2))
+  const wrap = document.getElementById('chord-sections-wrap')
+  if (wrap) wrap.style.setProperty('--chord-size', chordSize + 'px')
+}
+
+function changeLyricSize(delta) {
+  lyricSize = Math.max(12, Math.min(28, lyricSize + delta * 2))
+  const wrap = document.getElementById('lyrics-wrap')
+  if (wrap) wrap.style.setProperty('--lyric-size', lyricSize + 'px')
+}
+
+function switchTab(tab) {
+  currentTab = tab
+  const chord = document.getElementById('tab-chord')
+  const lyric = document.getElementById('tab-lyric')
+  if (chord) chord.style.display = tab === 'chord' ? 'block' : 'none'
+  if (lyric) lyric.style.display = tab === 'lyric' ? 'block' : 'none'
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', (i === 0 && tab === 'chord') || (i === 1 && tab === 'lyric'))
+  })
+}
+
+// JOB #13 — Wake Lock API
+async function toggleWakeLock() {
+  const btn = document.getElementById('wake-btn')
+  if (!('wakeLock' in navigator)) {
+    toast('Wake Lock tidak didukung browser ini')
+    return
+  }
+  if (wakeLock) {
+    await wakeLock.release()
+    wakeLock = null
+    if (btn) btn.classList.remove('wake-active')
+    btn.title = 'Cegah layar mati'
+    toast('Layar kembali normal')
+  } else {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen')
+      if (btn) btn.classList.add('wake-active')
+      btn.title = 'Layar terkunci (ketuk untuk nonaktifkan)'
+      toast('Layar tidak akan mati')
+      wakeLock.addEventListener('release', () => {
+        wakeLock = null
+        if (btn) btn.classList.remove('wake-active')
+      })
+    } catch (e) {
+      toast('Gagal mengaktifkan Wake Lock')
+    }
+  }
+}
+
+// Re-acquire wake lock when page becomes visible again
+document.addEventListener('visibilitychange', async () => {
+  if (wakeLock !== null && document.visibilityState === 'visible') {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen')
+    } catch {}
+  }
+})
+
+function escapeHtml(str) {
+  if (!str) return ''
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+}
+
+loadSong()
+</script>
+</body>
+</html>

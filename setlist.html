@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Setlist Ibadah</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand">Worship</a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Lagu</a>
+    <a href="setlist.html" class="nav-link active">Setlist</a>
+    <a href="admin.html" class="nav-link">Admin</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- Filter service type -->
+  <div class="tab-row" style="margin-bottom:1.25rem">
+    <button class="tab-btn active" onclick="filterType(null, this)">Semua</button>
+    <button class="tab-btn" onclick="filterType('Minggu Pagi', this)">Pagi</button>
+    <button class="tab-btn" onclick="filterType('Minggu Siang', this)">Siang</button>
+    <button class="tab-btn" onclick="filterType('Rabu', this)">Rabu</button>
+    <button class="tab-btn" onclick="filterType('Subuh', this)">Subuh</button>
+  </div>
+
+  <div id="setlist-container">
+    <!-- Skeleton loading -->
+    <div class="skeleton-card" style="min-height:160px;border-radius:12px;gap:12px">
+      <div class="skeleton-line skeleton-title" style="width:50%"></div>
+      <div class="skeleton-line skeleton-sub" style="width:35%"></div>
+      <div class="skeleton-line" style="height:40px;border-radius:8px"></div>
+      <div class="skeleton-line" style="height:40px;border-radius:8px"></div>
+    </div>
+    <div class="skeleton-card" style="min-height:140px;border-radius:12px;gap:12px;margin-top:1rem">
+      <div class="skeleton-line skeleton-title" style="width:45%"></div>
+      <div class="skeleton-line skeleton-sub" style="width:30%"></div>
+      <div class="skeleton-line" style="height:40px;border-radius:8px"></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="supabase.js"></script>
+<script>
+let allServices = []
+let activeType = null
+
+// JOB #9 — detect "this week" (Mon–Sun of current week)
+function getThisWeekRange() {
+  const now = new Date()
+  const day = now.getDay() // 0=Sun, 1=Mon...
+  const monday = new Date(now)
+  monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1))
+  monday.setHours(0,0,0,0)
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  sunday.setHours(23,59,59,999)
+  return { monday, sunday }
+}
+
+function isThisWeek(dateStr) {
+  const { monday, sunday } = getThisWeekRange()
+  const d = new Date(dateStr + 'T00:00:00')
+  return d >= monday && d <= sunday
+}
+
+async function loadSetlists() {
+  const { data, error } = await db
+    .from('services')
+    .select(`
+      id, service_date, service_type, theme,
+      setlist_items (
+        position, key_used, note,
+        songs ( id, title )
+      )
+    `)
+    .order('service_date', { ascending: false })
+    .limit(20)
+
+  if (error) {
+    document.getElementById('setlist-container').innerHTML =
+      '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Gagal memuat setlist.</div><div class="empty-sub">Periksa koneksi dan coba lagi.</div></div>'
+    return
+  }
+
+  allServices = (data || []).map(s => ({
+    ...s,
+    setlist_items: (s.setlist_items || []).sort((a, b) => a.position - b.position)
+  }))
+
+  renderSetlists(allServices)
+}
+
+function renderSetlists(services) {
+  const el = document.getElementById('setlist-container')
+  if (!services.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Belum ada setlist.</div><div class="empty-sub">Setlist akan muncul setelah admin membuatnya.</div></div>'
+    return
+  }
+
+  el.innerHTML = services.map(svc => {
+    const thisWeek = isThisWeek(svc.service_date)
+    return `
+    <div class="setlist-card${thisWeek ? ' this-week' : ''}">
+      <div class="setlist-header">
+        <div>
+          <div class="setlist-title">${escapeHtml(svc.theme || svc.service_type)}</div>
+          <div class="setlist-date">
+            ${formatDate(svc.service_date)}
+            ${thisWeek ? '<span class="setlist-this-week-badge">✦ Minggu Ini</span>' : ''}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          ${serviceTypeBadge(svc.service_type)}
+          <!-- JOB #12 — Share button -->
+          <button class="setlist-share-btn" onclick="shareSetlist(event, '${svc.id}')" title="Bagikan setlist">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      ${svc.setlist_items.length === 0
+        ? '<div style="padding:1rem 1.25rem;color:var(--hint);font-size:14px;">Belum ada lagu.</div>'
+        : svc.setlist_items.map((item, i) => `
+          <a class="setlist-item" href="song.html?id=${item.songs.id}&key=${encodeURIComponent(item.key_used || '')}&service=${svc.id}">
+            <div class="setlist-num">${i + 1}</div>
+            <div class="setlist-info">
+              <div class="setlist-song">${escapeHtml(item.songs.title)}</div>
+              <div class="setlist-key">${item.key_used ? 'Key ' + item.key_used : ''}${item.note ? ' · ' + escapeHtml(item.note) : ''}</div>
+            </div>
+            <div class="setlist-arrow">›</div>
+          </a>
+        `).join('')
+      }
+    </div>`
+  }).join('')
+
+  // Store service data for share function
+  window._servicesMap = {}
+  services.forEach(s => { window._servicesMap[s.id] = s })
+}
+
+function filterType(type, btn) {
+  activeType = type
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
+  btn.classList.add('active')
+  const filtered = type ? allServices.filter(s => s.service_type === type) : allServices
+  renderSetlists(filtered)
+}
+
+// JOB #12 — Share setlist via Web Share API or fallback clipboard
+function shareSetlist(event, serviceId) {
+  event.preventDefault()
+  event.stopPropagation()
+  const svc = window._servicesMap && window._servicesMap[serviceId]
+  if (!svc) return
+
+  const lines = []
+  lines.push(`🎵 *Setlist Ibadah*`)
+  lines.push(`📅 ${formatDate(svc.service_date)}`)
+  lines.push(`⛪ ${svc.service_type}${svc.theme ? ' — ' + svc.theme : ''}`)
+  lines.push('')
+  svc.setlist_items.forEach((item, i) => {
+    const key = item.key_used ? ` (${item.key_used})` : ''
+    const note = item.note ? ` — ${item.note}` : ''
+    lines.push(`${i + 1}. ${item.songs.title}${key}${note}`)
+  })
+  lines.push('')
+  lines.push('_Worship App_')
+
+  const text = lines.join('\n')
+
+  if (navigator.share) {
+    navigator.share({ title: `Setlist ${svc.service_type}`, text })
+      .catch(() => {}) // User cancelled
+  } else {
+    navigator.clipboard.writeText(text)
+      .then(() => toast('Setlist disalin ke clipboard'))
+      .catch(() => toast('Gagal menyalin'))
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return ''
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+}
+
+loadSetlists()
+</script>
+</body>
+</html>

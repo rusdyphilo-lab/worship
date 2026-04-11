@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Worship App</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand">Worship</a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Lagu</a>
+    <a href="setlist.html" class="nav-link">Setlist</a>
+    <a href="admin.html" class="nav-link active">Admin</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- Admin tabs -->
+  <div class="tab-row">
+    <button class="tab-btn active" onclick="showPanel('songs', this)">Kelola Lagu</button>
+    <button class="tab-btn" onclick="showPanel('setlist', this)">Buat Setlist</button>
+  </div>
+
+  <!-- ============ PANEL: KELOLA LAGU ============ -->
+  <div id="panel-songs">
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <div class="section-label" style="margin:0">Daftar Lagu</div>
+      <button class="btn btn-primary" onclick="openSongForm()">+ Tambah Lagu</button>
+    </div>
+
+    <div class="search-wrap" style="margin-bottom:1rem;">
+      <span class="search-icon">&#9906;</span>
+      <input class="search-input" id="admin-search" type="text" placeholder="Cari lagu..." oninput="filterAdminSongs()" />
+    </div>
+
+    <div id="admin-song-list"><div class="loading">Memuat...</div></div>
+  </div>
+
+  <!-- ============ PANEL: BUAT SETLIST ============ -->
+  <div id="panel-setlist" style="display:none">
+
+    <div class="card" style="cursor:default;">
+      <div class="section-label" style="margin-top:0">Info Ibadah</div>
+
+      <div class="form-group">
+        <label class="form-label">Tanggal</label>
+        <input class="input-field" type="date" id="svc-date" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Jenis Ibadah</label>
+        <select class="input-field" id="svc-type">
+          <option>Minggu Pagi</option>
+          <option>Minggu Siang</option>
+          <option>Rabu</option>
+          <option>Subuh</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Tema (opsional)</label>
+        <input class="input-field" type="text" id="svc-theme" placeholder="contoh: Kasih yang Memulihkan" />
+      </div>
+    </div>
+
+    <div class="section-label">Lagu dalam setlist</div>
+    <div id="setlist-songs" style="margin-bottom:1rem;"></div>
+
+    <div class="card" style="cursor:default;">
+      <div class="section-label" style="margin-top:0">Tambah lagu ke setlist</div>
+      <div class="search-wrap" style="margin-bottom:8px;">
+        <span class="search-icon">&#9906;</span>
+        <input class="search-input" id="sl-search" type="text" placeholder="Cari lagu..." oninput="filterSlSongs()" />
+      </div>
+      <div id="sl-song-picker" style="max-height:240px;overflow-y:auto;"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveSetlist()">Simpan Setlist</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============ MODAL: FORM LAGU ============ -->
+<div id="song-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;overflow-y:auto;">
+  <div style="max-width:640px;margin:2rem auto;padding:1rem;">
+    <div style="background:var(--surface);border-radius:var(--radius);padding:1.5rem;border:1px solid var(--border);">
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+        <h2 style="font-family:'Instrument Serif',serif;font-size:20px;" id="modal-title">Tambah Lagu</h2>
+        <button class="btn" onclick="closeModal()" style="padding:6px 12px;">✕</button>
+      </div>
+
+      <!-- Basic info -->
+      <div class="form-group">
+        <label class="form-label">Judul *</label>
+        <input class="input-field" id="f-title" type="text" placeholder="Nama lagu" />
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label class="form-label">Key default</label>
+          <select class="input-field" id="f-key">
+            <option>C</option><option>C#</option><option>D</option><option>D#</option>
+            <option>E</option><option>F</option><option>F#</option><option>G</option>
+            <option>G#</option><option>A</option><option>A#</option><option>B</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipe Lagu</label>
+          <select class="input-field" id="f-song-type">
+            <option value="">— pilih —</option>
+            <option>Hymn</option>
+            <option>Worship</option>
+            <option>SP</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label class="form-label">Genre</label>
+          <input class="input-field" id="f-genre" type="text" placeholder="ballad, rock, funk..." />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tempo</label>
+          <input class="input-field" id="f-tempo" type="text" placeholder="slow, medium, fast..." />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Catatan umum</label>
+        <input class="input-field" id="f-notes" type="text" placeholder="ambil ending, tunggu sign MD..." />
+      </div>
+
+      <!-- Chord progression input -->
+      <div class="kbd-wrap">
+        <div class="section-label" style="margin-top:0">Progresi Chord</div>
+
+        <div class="sec-tabs" id="sec-tabs">
+          <button type="button" class="sec-tab active" onclick="switchSec('Intro',this)">Intro</button>
+          <button type="button" class="sec-tab" onclick="switchSec('Verse',this)">Verse</button>
+          <button type="button" class="sec-tab" onclick="switchSec('Reff',this)">Reff</button>
+          <button type="button" class="sec-tab" onclick="switchSec('Bridge',this)">Bridge</button>
+          <button type="button" class="sec-tab" onclick="switchSec('Outro',this)">Outro</button>
+        </div>
+
+        <!-- Live preview of chord being built -->
+        <div id="chord-preview" style="min-height:32px;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+          <span style="font-size:12px;color:var(--muted)">Preview:</span>
+          <span id="chord-preview-text" style="font-size:20px;font-weight:700;color:var(--accent);min-width:40px;">—</span>
+          <span id="chord-preview-hint" style="font-size:11px;color:var(--muted);"></span>
+        </div>
+
+        <div class="prog-display" id="prog-display">
+          <span class="prog-placeholder" id="prog-placeholder">ketuk angka di bawah...</span>
+        </div>
+
+        <!-- Paste / Copy bar -->
+        <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center;">
+          <input class="input-field" id="paste-input" type="text"
+            placeholder="paste/ketik: 1 2m 4 5 | 1 4M#/5 1"
+            style="flex:1;font-size:13px;font-family:monospace;"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();parsePaste()}" />
+          <button type="button" class="btn" onclick="parsePaste()" style="white-space:nowrap;font-size:13px;">+ Masuk</button>
+          <button type="button" class="btn" onclick="copySection()" style="white-space:nowrap;font-size:13px;" title="Copy section ini">⎘ Copy</button>
+        </div>
+
+        <!-- Modifier buttons (combinable — toggle freely) -->
+        <div class="mod-grid" style="margin-bottom:6px;">
+          <button type="button" class="mod-btn" id="mod-m" onclick="toggleMod('m')">m <span style="font-size:10px;opacity:.6">minor</span></button>
+          <button type="button" class="mod-btn" id="mod-M" onclick="toggleMod('M')">M <span style="font-size:10px;opacity:.6">major</span></button>
+          <button type="button" class="mod-btn" id="mod-sharp" onclick="toggleMod('#')"># <span style="font-size:10px;opacity:.6">sharp</span></button>
+          <button type="button" class="mod-btn" id="mod-slash" onclick="toggleMod('/')">/ <span style="font-size:10px;opacity:.6">slash</span></button>
+        </div>
+
+        <!-- Number grid -->
+        <div class="num-grid">
+          <button type="button" class="kbd-btn" onclick="pressNum('1')">1</button>
+          <button type="button" class="kbd-btn" onclick="pressNum('2')">2</button>
+          <button type="button" class="kbd-btn" onclick="pressNum('3')">3</button>
+          <button type="button" class="kbd-btn" onclick="pressNum('4')">4</button>
+          <button type="button" class="kbd-btn" onclick="pressNum('5')">5</button>
+          <button type="button" class="kbd-btn" onclick="pressNum('6')">6</button>
+          <button type="button" class="kbd-btn" onclick="pressNum('7')">7</button>
+          <button type="button" class="kbd-btn" onclick="pressBar()" style="color:var(--muted);font-size:18px;font-weight:300">|</button>
+          <button type="button" class="kbd-btn" onclick="deleteLast()" style="color:var(--muted)">⌫</button>
+          <button type="button" class="kbd-btn" onclick="clearSection()" style="color:var(--muted);font-size:12px">clr</button>
+        </div>
+
+        <div style="margin-top:6px;">
+          <button type="button" class="kbd-btn" onclick="pressDot()" style="flex:1;color:var(--muted);font-size:20px;">·</button>
+          <button type="button" class="kbd-btn" onclick="pressEnter()" style="flex:2;color:var(--muted);font-size:13px;letter-spacing:1px;">↵ baris baru</button>
+        </div>
+
+        <div class="hint-text" id="mod-hint">Pilih modifier dulu (boleh kombinasi), lalu ketuk angka</div>
+      </div>
+
+      <!-- Lyrics -->
+      <div class="form-group">
+        <label class="form-label">Lirik</label>
+        <textarea class="input-field" id="f-lyrics" rows="8"
+          placeholder="Tempel lirik dari Easy Worship di sini...&#10;&#10;Verse 1&#10;...&#10;&#10;Reff&#10;..."
+          style="resize:vertical;font-size:14px;line-height:1.7;"></textarea>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveSong()">Simpan Lagu</button>
+        <button class="btn btn-danger" id="delete-btn" onclick="deleteSong()" style="display:none">Hapus</button>
+        <button class="btn" onclick="closeModal()">Batal</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="supabase.js"></script>
+<script>
+
+// ============================================================
+// STATE
+// ============================================================
+// JOB #19 — XSS sanitization helper
+function escapeHtml(str) {
+  if (!str) return ''
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
+let allSongs = []
+let editingSongId = null
+let currentSec = 'Intro'
+let activeMods = []
+let sections = { Intro:[], Verse:[], Reff:[], Bridge:[], Outro:[] }
+let setlistSongs = [] // [{song, keyUsed, note}]
+
+// ============================================================
+// PANEL SWITCHING
+// ============================================================
+function showPanel(name, btn) {
+  document.getElementById('panel-songs').style.display = name === 'songs' ? 'block' : 'none'
+  document.getElementById('panel-setlist').style.display = name === 'setlist' ? 'block' : 'none'
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
+  btn.classList.add('active')
+  if (name === 'setlist') renderSlPicker(allSongs)
+}
+
+// ============================================================
+// SONG LIST (admin)
+// ============================================================
+async function loadAdminSongs() {
+  const { data } = await db.from('songs').select('id,title,default_key,song_type,genre,tempo').order('title')
+  allSongs = data || []
+  renderAdminList(allSongs)
+  renderSlPicker(allSongs)
+}
+
+function renderAdminList(songs) {
+  const el = document.getElementById('admin-song-list')
+  if (!songs.length) { el.innerHTML = '<div class="empty">Belum ada lagu.</div>'; return }
+  el.innerHTML = songs.map(s => {
+    const meta = [s.song_type, s.genre, s.tempo].filter(Boolean).join(' · ')
+    return `
+    <div class="card" onclick="openSongForm('${s.id}')">
+      <div class="card-row">
+        <div>
+          <div class="card-title">${escapeHtml(s.title)}</div>
+          <div class="card-sub">${escapeHtml(meta) || 'ketuk untuk edit'}</div>
+        </div>
+        <span class="card-badge">${escapeHtml(s.default_key) || '—'}</span>
+      </div>
+    </div>`
+  }).join('')
+}
+
+function filterAdminSongs() {
+  const q = document.getElementById('admin-search').value.toLowerCase()
+  renderAdminList(q ? allSongs.filter(s => s.title.toLowerCase().includes(q)) : allSongs)
+}
+
+// ============================================================
+// SONG FORM MODAL
+// ============================================================
+async function openSongForm(id = null) {
+  editingSongId = id
+  resetForm()
+
+  if (id) {
+    document.getElementById('modal-title').textContent = 'Edit Lagu'
+    document.getElementById('delete-btn').style.display = ''
+    const { data } = await db.from('songs').select('*').eq('id', id).single()
+    if (data) populateForm(data)
+  } else {
+    document.getElementById('modal-title').textContent = 'Tambah Lagu'
+    document.getElementById('delete-btn').style.display = 'none'
+  }
+
+  document.getElementById('song-modal').style.display = 'block'
+  document.body.style.overflow = 'hidden'
+}
+
+function closeModal() {
+  document.getElementById('song-modal').style.display = 'none'
+  document.body.style.overflow = ''
+}
+
+function resetForm() {
+  document.getElementById('f-title').value = ''
+  document.getElementById('f-key').value = 'C'
+  document.getElementById('f-song-type').value = ''
+  document.getElementById('f-genre').value = ''
+  document.getElementById('f-tempo').value = ''
+  document.getElementById('f-notes').value = ''
+  document.getElementById('f-lyrics').value = ''
+  sections = { Intro:[], Verse:[], Reff:[], Bridge:[], Outro:[] }
+  currentSec = 'Intro'
+  activeMods = []
+  kbdMode = 'chord'
+  pendingChord = ''
+  switchSec('Intro', document.querySelector('.sec-tab'))
+  renderDisplay()
+}
+
+function populateForm(data) {
+  document.getElementById('f-title').value = data.title || ''
+  document.getElementById('f-key').value = data.default_key || 'C'
+  document.getElementById('f-song-type').value = data.song_type || ''
+  document.getElementById('f-genre').value = data.genre || ''
+  document.getElementById('f-tempo').value = data.tempo || ''
+  document.getElementById('f-notes').value = data.notes || ''
+  document.getElementById('f-lyrics').value = data.lyrics || ''
+  sections = { Intro:[], Verse:[], Reff:[], Bridge:[], Outro:[], ...(data.sections || {}) }
+  renderDisplay()
+}
+
+async function saveSong() {
+  const title = document.getElementById('f-title').value.trim()
+  if (!title) { toast('Judul wajib diisi'); return }
+
+  const payload = {
+    title,
+    default_key: document.getElementById('f-key').value,
+    song_type: document.getElementById('f-song-type').value || null,
+    genre: document.getElementById('f-genre').value.trim() || null,
+    tempo: document.getElementById('f-tempo').value.trim() || null,
+    notes: document.getElementById('f-notes').value.trim() || null,
+    lyrics: document.getElementById('f-lyrics').value.trim() || null,
+    sections
+  }
+
+  let error
+  if (editingSongId) {
+    ({ error } = await db.from('songs').update(payload).eq('id', editingSongId))
+  } else {
+    ({ error } = await db.from('songs').insert(payload))
+  }
+
+  if (error) { toast('Gagal menyimpan: ' + error.message); return }
+  toast('Lagu disimpan!')
+  closeModal()
+  loadAdminSongs()
+}
+
+async function deleteSong() {
+  if (!confirm('Hapus lagu ini?')) return
+  const { error } = await db.from('songs').delete().eq('id', editingSongId)
+  if (error) { toast('Gagal menghapus'); return }
+  toast('Lagu dihapus')
+  closeModal()
+  loadAdminSongs()
+}
+
+// ============================================================
+// CHORD KEYBOARD
+// ============================================================
+// State machine:
+//   mode = 'chord'  → modifiers + number builds a chord token
+//   mode = 'slash'  → waiting for bass number after '/'
+//
+// activeMods = ['m','#'] etc — freely combinable
+// pendingChord = e.g. '4M#' — built chord waiting for optional slash bass
+//
+// Flow examples:
+//   4M#      → toggle M, toggle #, press 4 → token "4M#"
+//   4M#/5    → toggle M, toggle #, press 4 → token "4M#", toggle /, press 5 → token becomes "4M#/5"
+//   1/6      → press 1 → token "1", toggle /, press 6 → token "1/6"
+
+let kbdMode = 'chord'   // 'chord' | 'slash'
+let pendingChord = ''   // chord token being completed with slash bass
+
+function switchSec(sec, btn) {
+  currentSec = sec
+  document.querySelectorAll('.sec-tab').forEach(b => b.classList.remove('active'))
+  if (btn) btn.classList.add('active')
+  resetKbdState()
+  renderDisplay()
+}
+
+function resetKbdState() {
+  kbdMode = 'chord'
+  pendingChord = ''
+  activeMods = []
+  updateModBtns()
+  updatePreview()
+  const pi = document.getElementById('paste-input')
+  if (pi) pi.value = ''
+}
+
+function renderDisplay() {
+  const prog = sections[currentSec] || []
+  const disp = document.getElementById('prog-display')
+  const ph = document.getElementById('prog-placeholder')
+  disp.querySelectorAll('.prog-chip,.prog-sep-chip,.prog-newline,.prog-bar,.prog-linebreak').forEach(e => e.remove())
+  // Remove any leftover <br> tags
+  disp.querySelectorAll('br').forEach(e => e.remove())
+
+  if (prog.length === 0) { ph.style.display = ''; return }
+  ph.style.display = 'none'
+
+  prog.forEach((token, i) => {
+    if (token === '\n') {
+      // Render newline as a visible chip + actual line break
+      const chip = document.createElement('span')
+      chip.className = 'prog-newline'
+      chip.title = 'klik hapus baris baru'
+      chip.textContent = '↵'
+      chip.onclick = () => { sections[currentSec].splice(i, 1); renderDisplay() }
+      disp.appendChild(chip)
+
+      const br = document.createElement('div')
+      br.className = 'prog-linebreak'
+      disp.appendChild(br)
+    } else if (token === '|') {
+      const el = document.createElement('span')
+      el.className = 'prog-bar'
+      el.textContent = '|'
+      el.title = 'klik hapus'
+      el.onclick = () => { sections[currentSec].splice(i, 1); renderDisplay() }
+      disp.appendChild(el)
+    } else if (token === '.') {
+      const el = document.createElement('span')
+      el.className = 'prog-bar'
+      el.textContent = '·'
+      el.style.fontSize = '20px'
+      el.title = 'klik hapus'
+      el.onclick = () => { sections[currentSec].splice(i, 1); renderDisplay() }
+      disp.appendChild(el)
+    } else {
+      const el = document.createElement('span')
+      el.className = 'prog-chip'
+      el.innerHTML = `${token}<span class="prog-chip-del">×</span>`
+      el.onclick = () => { sections[currentSec].splice(i, 1); renderDisplay() }
+      disp.appendChild(el)
+    }
+  })
+}
+
+function updatePreview() {
+  const previewEl = document.getElementById('chord-preview-text')
+  const hintEl = document.getElementById('chord-preview-hint')
+
+  if (kbdMode === 'slash') {
+    previewEl.textContent = pendingChord + '/'
+    hintEl.textContent = '← ketuk angka bass'
+  } else {
+    const mods = activeMods.join('')
+    if (mods) {
+      previewEl.textContent = '?' + mods
+      hintEl.textContent = '← ketuk angka'
+    } else {
+      previewEl.textContent = '—'
+      hintEl.textContent = ''
+    }
+  }
+}
+
+function pressNum(n) {
+  if (!sections[currentSec]) sections[currentSec] = []
+
+  if (kbdMode === 'slash') {
+    // Complete slash chord: append bass note to pending chord
+    const completed = pendingChord + '/' + n
+    // Replace the last token (which was pendingChord without slash yet) with completed
+    const arr = sections[currentSec]
+    if (arr.length > 0 && arr[arr.length - 1] === pendingChord) {
+      arr[arr.length - 1] = completed
+    } else {
+      arr.push(completed)
+    }
+    resetKbdState()
+    renderDisplay()
+    return
+  }
+
+  // Normal chord mode: build token from mods + number
+  // Modifier order: number first, then mods (e.g. 4M#)
+  const mods = activeMods.join('')
+  const token = n + mods
+  sections[currentSec].push(token)
+  pendingChord = token
+  activeMods = []
+  kbdMode = 'chord'
+  updateModBtns()
+  updatePreview()
+  renderDisplay()
+  document.getElementById('mod-hint').textContent = 'Chord ditambahkan — aktifkan / untuk slash bass, atau lanjut'
+}
+
+function toggleMod(m) {
+  if (m === '/') {
+    // Slash mode: only valid after a chord is placed
+    if (kbdMode === 'slash') {
+      // Cancel slash mode
+      kbdMode = 'chord'
+      pendingChord = ''
+    } else {
+      // Enter slash mode — pendingChord should be the last token
+      const arr = sections[currentSec] || []
+      if (arr.length > 0 && arr[arr.length - 1] !== '\n') {
+        pendingChord = arr[arr.length - 1]
+        kbdMode = 'slash'
+      }
+    }
+    updateModBtns()
+    updatePreview()
+    return
+  }
+
+  // Regular modifier: toggle freely, combinable
+  if (activeMods.includes(m)) {
+    activeMods = activeMods.filter(x => x !== m)
+  } else {
+    activeMods.push(m)
+  }
+  updateModBtns()
+  updatePreview()
+  const active = activeMods.length
+    ? `modifier aktif: ${activeMods.join('')} — ketuk angka`
+    : 'Pilih modifier dulu (boleh kombinasi), lalu ketuk angka'
+  document.getElementById('mod-hint').textContent = active
+}
+
+function updateModBtns() {
+  document.getElementById('mod-m').classList.toggle('active-mod', activeMods.includes('m'))
+  document.getElementById('mod-M').classList.toggle('active-mod', activeMods.includes('M'))
+  document.getElementById('mod-sharp').classList.toggle('active-mod', activeMods.includes('#'))
+  document.getElementById('mod-slash').classList.toggle('active-mod', kbdMode === 'slash')
+}
+
+function pressDot() {
+  if (!sections[currentSec]) sections[currentSec] = []
+  sections[currentSec].push('.')
+  resetKbdState()
+  renderDisplay()
+}
+
+function pressBar() {
+  if (!sections[currentSec]) sections[currentSec] = []
+  sections[currentSec].push('|')
+  resetKbdState()
+  renderDisplay()
+}
+
+function pressEnter() {
+  if (!sections[currentSec]) sections[currentSec] = []
+  sections[currentSec].push('\n')
+  resetKbdState()
+  renderDisplay()
+}
+
+// Parse pasted text into tokens
+// Rules:
+//   - spaces separate tokens
+//   - | becomes a bar token
+//   - newlines (\n) become newline tokens
+//   - valid token chars: digits, m, M, #, /
+// Examples: "1 2m 4M# 5 | 1 4M#/5" or "1 2m\n4 5"
+function parsePaste() {
+  const raw = document.getElementById('paste-input').value.trim()
+  if (!raw) return
+  if (!sections[currentSec]) sections[currentSec] = []
+
+  // Split by newlines first
+  const lines = raw.split('\n')
+  lines.forEach((line, lineIdx) => {
+    const trimmed = line.trim()
+    if (!trimmed) return
+
+    const parts = trimmed.split(/\s+/).filter(Boolean)
+    parts.forEach(part => {
+      if (part === '|') {
+        sections[currentSec].push('|')
+      } else if (part === '.') {
+        sections[currentSec].push('.')
+      } else if (/^[1-7][mM#/\d]*$/.test(part)) {
+        sections[currentSec].push(part)
+      }
+    })
+
+    // Only add \n if there's a next non-empty line
+    const nextLine = lines.slice(lineIdx + 1).find(l => l.trim())
+    if (nextLine !== undefined) {
+      sections[currentSec].push('\n')
+    }
+  })
+
+  document.getElementById('paste-input').value = ''
+  resetKbdState()
+  renderDisplay()
+}
+
+// Serialize current section tokens back to readable text and copy to clipboard
+function copySection() {
+  const prog = sections[currentSec] || []
+  if (!prog.length) { toast('Section kosong'); return }
+
+  let text = ''
+  prog.forEach((token, i) => {
+    if (token === '\n') {
+      text += '\n'
+    } else if (token === '|') {
+      text += ' | '
+    } else {
+      text += (text && text[text.length - 1] !== '\n' && text[text.length - 1] !== ' ' ? ' ' : '') + token
+    }
+  })
+
+  navigator.clipboard.writeText(text.trim()).then(() => {
+    toast('Progresi ' + currentSec + ' disalin!')
+  }).catch(() => {
+    // Fallback for non-https
+    const el = document.createElement('textarea')
+    el.value = text.trim()
+    document.body.appendChild(el)
+    el.select()
+    document.execCommand('copy')
+    document.body.removeChild(el)
+    toast('Progresi ' + currentSec + ' disalin!')
+  })
+}
+
+function deleteLast() {
+  if (!sections[currentSec]) return
+  sections[currentSec].pop()
+  resetKbdState()
+  renderDisplay()
+}
+
+function clearSection() {
+  sections[currentSec] = []
+  resetKbdState()
+  renderDisplay()
+}
+
+// ============================================================
+// SETLIST BUILDER
+// ============================================================
+function renderSlPicker(songs) {
+  const el = document.getElementById('sl-song-picker')
+  if (!el) return
+  el.innerHTML = songs.map(s => `
+    <div class="card" style="margin-bottom:6px;" onclick="addToSetlist('${s.id}','${escapeHtml(s.title).replace(/'/g,'&#39;')}','${escapeHtml(s.default_key||'C')}')">
+      <div class="card-row">
+        <div class="card-title" style="font-size:14px;">${escapeHtml(s.title)}</div>
+        <span style="font-size:13px;color:var(--hint)">+ tambah</span>
+      </div>
+    </div>
+  `).join('')
+}
+
+function filterSlSongs() {
+  const q = document.getElementById('sl-search').value.toLowerCase()
+  renderSlPicker(q ? allSongs.filter(s => s.title.toLowerCase().includes(q)) : allSongs)
+}
+
+function addToSetlist(id, title, key) {
+  if (setlistSongs.find(s => s.id === id)) { toast('Lagu sudah ada'); return }
+  setlistSongs.push({ id, title, keyUsed: key, note: '' })
+  renderSetlistBuilder()
+}
+
+function removeFromSetlist(id) {
+  setlistSongs = setlistSongs.filter(s => s.id !== id)
+  renderSetlistBuilder()
+}
+
+function renderSetlistBuilder() {
+  const el = document.getElementById('setlist-songs')
+  if (!setlistSongs.length) {
+    el.innerHTML = '<div class="empty" style="padding:1rem 0;">Belum ada lagu. Cari dan tambahkan di bawah.</div>'
+    return
+  }
+  el.innerHTML = setlistSongs.map((s, i) => `
+    <div class="card" style="cursor:default;margin-bottom:6px;">
+      <div class="card-row" style="margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:var(--hint);font-size:13px;">${i+1}</span>
+          <span style="font-weight:500;">${s.title}</span>
+        </div>
+        <button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" onclick="removeFromSetlist('${s.id}')">hapus</button>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <select class="input-field" style="flex:0 0 80px;font-size:13px;"
+          onchange="setlistSongs[${i}].keyUsed=this.value">
+          ${KEYS.map(k => `<option ${k===s.keyUsed?'selected':''}>${k}</option>`).join('')}
+        </select>
+        <input class="input-field" type="text" placeholder="catatan (opsional)" style="font-size:13px;"
+          value="${s.note || ''}" oninput="setlistSongs[${i}].note=this.value" />
+      </div>
+    </div>
+  `).join('')
+}
+
+async function saveSetlist() {
+  const date = document.getElementById('svc-date').value
+  const type = document.getElementById('svc-type').value
+  const theme = document.getElementById('svc-theme').value.trim()
+
+  if (!date) { toast('Pilih tanggal dulu'); return }
+  if (!setlistSongs.length) { toast('Tambahkan minimal 1 lagu'); return }
+
+  const { data: svc, error: e1 } = await db
+    .from('services')
+    .insert({ service_date: date, service_type: type, theme: theme || null })
+    .select()
+    .single()
+
+  if (e1) { toast('Gagal: ' + e1.message); return }
+
+  const items = setlistSongs.map((s, i) => ({
+    service_id: svc.id,
+    song_id: s.id,
+    position: i + 1,
+    key_used: s.keyUsed || null,
+    note: s.note || null
+  }))
+
+  const { error: e2 } = await db.from('setlist_items').insert(items)
+  if (e2) { toast('Gagal simpan setlist: ' + e2.message); return }
+
+  toast('Setlist disimpan!')
+  setlistSongs = []
+  renderSetlistBuilder()
+  document.getElementById('svc-date').value = ''
+  document.getElementById('svc-theme').value = ''
+}
+
+// ============================================================
+// INIT
+// ============================================================
+
+// Set default date to today
+const today = new Date().toISOString().split('T')[0]
+document.getElementById('svc-date').value = today
+
+// Auto-open edit if ?edit=ID is in URL (from song page edit button)
+const _editParam = new URLSearchParams(location.search).get('edit')
+
+loadAdminSongs().then(() => {
+  if (_editParam) {
+    openSongForm(_editParam)
+    // Clean URL without reload
+    history.replaceState(null, '', 'admin.html')
+  }
+})
+
+// Make loadAdminSongs return a promise
+
+</script>
+</body>
+</html>
