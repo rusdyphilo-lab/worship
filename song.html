@@ -369,18 +369,15 @@
 
     /* Inline chord+lyric units */
     .cl-inline-line {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-end;
-      justify-content: flex-start;
-      width: 100%;
-      margin-bottom: 6px;
+      display: block;
+      margin-bottom: 10px;
       line-height: 1;
     }
     .cl-unit {
       display: inline-flex;
       flex-direction: column;
       align-items: flex-start;
+      vertical-align: bottom;
       flex-shrink: 0;
     }
     .cl-unit .cl-chord-name {
