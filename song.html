@@ -372,6 +372,8 @@
       display: flex;
       flex-wrap: wrap;
       align-items: flex-end;
+      justify-content: flex-start;
+      width: 100%;
       margin-bottom: 10px;
       line-height: 1;
     }
@@ -650,6 +652,8 @@ function renderChordSections() {
 
   const allChordsHtml = allSecs.map(secName => {
     const data = sections[secName]
+    const text = typeof data === 'string' ? data : legacyToText(data)
+    if (!isInlineFormat(text)) return ''
     return renderSectionChordOnly(data)
   }).filter(Boolean).join('')
 
@@ -740,6 +744,9 @@ function renderChordLyricMode() {
 
   const allHtml = allSecs.map(secName => {
     const data = sections[secName]
+    // Skip sections that contain no chord markers at all
+    const text = typeof data === 'string' ? data : legacyToText(data)
+    if (!isInlineFormat(text)) return ''
     return renderInlineChordLyric(data)
   }).filter(Boolean).join('')
 
