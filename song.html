@@ -738,18 +738,12 @@ function renderChordLyricMode() {
     return '<div class="empty"><div class="empty-icon">🎵</div><div class="empty-title">Belum ada konten.</div></div>'
   }
 
-  return allSecs.map(secName => {
+  const allHtml = allSecs.map(secName => {
     const data = sections[secName]
-    const linesHtml = renderInlineChordLyric(data)
-    return `
-      <div class="cl-section">
-        <div class="cl-section-name">
-          <span class="cl-section-badge">${escapeHtml(secName)}</span>
-        </div>
-        ${linesHtml}
-      </div>
-    `
-  }).join('<div class="cl-separator"></div>')
+    return renderInlineChordLyric(data)
+  }).filter(Boolean).join('')
+
+  return `<div class="cl-section">${allHtml}</div>`
 }
 
 // Render one section of inline [chord]lyric text as aligned chord+lyric lines
@@ -838,25 +832,8 @@ function renderLyricMode() {
   lyrics = lyrics.replace(/\[[^\]]*\]/g, '')
 
   const blocks = splitLyricByLabels(lyrics)
-  const labeledCount = blocks.filter(b => b.label).length
-
-  if (labeledCount < 2) {
-    return `<div class="lyrics-block">${escapeHtml(lyrics)}</div>`
-  }
-
-  return blocks.map(b => {
-    const body = b.lines.join('\n').trim()
-    if (!body && !b.label) return ''
-    const header = b.label
-      ? `<div class="lyric-section-name"><span class="lyric-section-badge">${escapeHtml(b.label)}</span></div>`
-      : ''
-    return `
-      <div class="lyric-section">
-        ${header}
-        <div class="lyric-section-body">${escapeHtml(body)}</div>
-      </div>
-    `
-  }).join('')
+  const allText = blocks.map(b => b.lines.join('\n').trim()).filter(Boolean).join('\n')
+  return `<div class="lyrics-block">${escapeHtml(allText)}</div>`
 }
 
 // ============================================================
