@@ -370,25 +370,29 @@
     /* Inline chord+lyric units */
     .cl-inline-line {
       display: block;
+      padding-top: calc(var(--cl-size) * 1.4);
       margin-bottom: 10px;
-      line-height: 1;
+      position: relative;
+      line-height: var(--cl-size);
     }
     .cl-unit {
-      display: inline-flex;
-      flex-direction: column;
-      align-items: flex-start;
-      vertical-align: bottom;
-      flex-shrink: 0;
+      display: inline;
+      position: relative;
     }
     .cl-unit .cl-chord-name {
-      margin-bottom: 2px;
-      align-self: flex-start;
+      position: absolute;
+      top: calc(var(--cl-size) * -1.4);
+      left: 0;
+      margin-bottom: 0;
+    }
+    .cl-chord-placeholder {
+      display: none;
     }
     .cl-lyric-part {
       font-size: var(--cl-size);
       color: var(--text);
       white-space: pre-wrap;
-      line-height: 1.5;
+      line-height: 1.8;
     }
   </style>
 </head>
@@ -776,15 +780,7 @@ function renderInlineChordLyric(data) {
     }
 
     // Build positioned chord+lyric using inline-block spans
-    // Split prefix (text before first chord) out of flex flow
-    let prefixHtml = ''
-    let startIdx = 0
-    if (segments.length > 0 && !segments[0].chord && segments[0].lyric) {
-      prefixHtml = `<div class="cl-lyric-line" style="font-size:var(--cl-size);margin-bottom:2px;">${escapeHtml(segments[0].lyric)}</div>`
-      startIdx = 1
-    }
-
-    const segHtml = segments.slice(startIdx).map(seg => {
+    const segHtml = segments.map(seg => {
       const lyricSpan = seg.lyric
         ? `<span class="cl-lyric-part">${escapeHtml(seg.lyric)}</span>`
         : ''
@@ -798,7 +794,8 @@ function renderInlineChordLyric(data) {
           lyricSpan +
           `</span>`
       }
-      return lyricSpan ? `<span class="cl-unit">${lyricSpan}</span>` : ''
+      // Text before first chord — render as inline unit with empty chord space
+      return lyricSpan ? `<span class="cl-unit"><span class="cl-chord-placeholder"></span>${lyricSpan}</span>` : ''
     }).join('')
 
     if (!hasLyric) {
@@ -811,7 +808,7 @@ function renderInlineChordLyric(data) {
       return `<div class="cl-line"><div class="cl-chords" style="justify-content:flex-start;">${chordBadges}</div></div>`
     }
 
-    return `${prefixHtml}<div class="cl-line cl-inline-line">${segHtml}</div>`
+    return `<div class="cl-line cl-inline-line">${segHtml}</div>`
   }).join('')
 }
 
