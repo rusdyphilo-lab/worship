@@ -370,29 +370,27 @@
     /* Inline chord+lyric units */
     .cl-inline-line {
       display: block;
-      padding-top: calc(var(--cl-size) * 1.4);
-      margin-bottom: 10px;
-      position: relative;
-      line-height: var(--cl-size);
+      margin-bottom: 14px;
     }
     .cl-unit {
-      display: inline;
-      position: relative;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      vertical-align: bottom;
     }
     .cl-unit .cl-chord-name {
-      position: absolute;
-      top: calc(var(--cl-size) * -1.4);
-      left: 0;
-      margin-bottom: 0;
+      margin-bottom: 2px;
+      align-self: flex-start;
     }
     .cl-chord-placeholder {
-      display: none;
+      display: block;
+      min-height: calc(var(--cl-size) * 0.82 * 1.4 + 4px);
     }
     .cl-lyric-part {
       font-size: var(--cl-size);
       color: var(--text);
-      white-space: pre-wrap;
-      line-height: 1.8;
+      white-space: pre;
+      line-height: 1.6;
     }
   </style>
 </head>
@@ -494,7 +492,8 @@ function render() {
   const meta = [song.song_type, song.genre, song.tempo, song.notes].filter(Boolean).join(' · ')
 
   // JOB #4 — Show tab only if lyrics exist
-  const hasLyrics = song.lyrics && song.lyrics.trim().length > 0
+  const hasLyrics = (song.lyrics && song.lyrics.trim().length > 0) ||
+    (song.sections && song.sections.All && song.sections.All.trim().length > 0)
   if (!hasLyrics && currentTab === 'lyric') currentTab = 'chord'
 
   // Nav: prev/next from navList (setlist order or alphabetical)
@@ -635,31 +634,18 @@ function render() {
 // ============================================================
 
 function renderChordSections() {
-  const sections = song.sections || {}
+  const text = (song.sections && song.sections.All) ? song.sections.All : ''
 
-  function hasContent(v) {
-    if (!v) return false
-    if (typeof v === 'string') return v.trim().length > 0
-    if (Array.isArray(v)) return v.length > 0
-    return false
-  }
-
-  const order = SECTION_ORDER.filter(s => hasContent(sections[s]))
-  const extras = Object.keys(sections).filter(s => !SECTION_ORDER.includes(s) && hasContent(sections[s]))
-  const allSecs = [...order, ...extras]
-
-  if (allSecs.length === 0) {
+  if (!text.trim()) {
     return '<div class="empty"><div class="empty-icon">🎸</div><div class="empty-title">Progresi chord belum tersedia.</div></div>'
   }
 
-  const allChordsHtml = allSecs.map(secName => {
-    const data = sections[secName]
-    const text = typeof data === 'string' ? data : legacyToText(data)
-    if (!isInlineFormat(text)) return ''
-    return renderSectionChordOnly(data)
-  }).filter(Boolean).join('')
+  if (!isInlineFormat(text)) {
+    return '<div class="empty"><div class="empty-icon">🎸</div><div class="empty-title">Progresi chord belum tersedia.</div></div>'
+  }
 
-  return `<div class="chord-section">${allChordsHtml}</div>`
+  const html = renderSectionChordOnly(text)
+  return `<div class="chord-section">${html}</div>`
 }
 
 // Render chord-only view from inline [chord]lyric text
@@ -727,32 +713,13 @@ function legacyToText(arr) {
 // ============================================================
 
 function renderChordLyricMode() {
-  const sections = song.sections || {}
+  const text = (song.sections && song.sections.All) ? song.sections.All : ''
 
-  function hasContent(v) {
-    if (!v) return false
-    if (typeof v === 'string') return v.trim().length > 0
-    if (Array.isArray(v)) return v.length > 0
-    return false
-  }
-
-  const order = SECTION_ORDER.filter(s => hasContent(sections[s]))
-  const extras = Object.keys(sections).filter(s => !SECTION_ORDER.includes(s) && hasContent(sections[s]))
-  const allSecs = [...order, ...extras]
-
-  if (allSecs.length === 0) {
+  if (!text.trim()) {
     return '<div class="empty"><div class="empty-icon">🎵</div><div class="empty-title">Belum ada konten.</div></div>'
   }
 
-  const allHtml = allSecs.map(secName => {
-    const data = sections[secName]
-    // Skip sections that contain no chord markers at all
-    const text = typeof data === 'string' ? data : legacyToText(data)
-    if (!isInlineFormat(text)) return ''
-    return renderInlineChordLyric(data)
-  }).filter(Boolean).join('')
-
-  return `<div class="cl-section">${allHtml}</div>`
+  return `<div class="cl-section">${renderInlineChordLyric(text)}</div>`
 }
 
 // Render one section of inline [chord]lyric text as aligned chord+lyric lines
@@ -817,37 +784,18 @@ function renderInlineChordLyric(data) {
 // ============================================================
 
 function renderLyricMode() {
-  // Build lyrics from sections (strip chord markers) if song.lyrics is empty
-  let lyrics = song.lyrics || ''
-
-  // If lyrics is empty but sections exist, derive from sections
-  if (!lyrics.trim() && song.sections) {
-    const parts = []
-    SECTION_ORDER.forEach(s => {
-      const d = song.sections[s]
-      if (!d) return
-      const text = typeof d === 'string' ? d : legacyToText(d)
-      if (!text.trim()) return
-      parts.push(s)
-      text.split('\n').forEach(line => {
-        const plain = stripChords(line).trim()
-        if (plain) parts.push(plain)
-      })
-      parts.push('')
-    })
-    lyrics = parts.join('\n').trim()
+  let lyrics = ''
+  if (song.sections && song.sections.All && song.sections.All.trim()) {
+    lyrics = song.sections.All.replace(/\[[^\]]*\]/g, '')
+  } else {
+    lyrics = (song.lyrics || '').replace(/\[[^\]]*\]/g, '')
   }
 
   if (!lyrics.trim()) {
     return '<div class="empty"><div class="empty-icon">🎵</div><div class="empty-title">Belum ada lirik.</div></div>'
   }
 
-  // Strip any remaining chord markers from lyrics field
-  lyrics = lyrics.replace(/\[[^\]]*\]/g, '')
-
-  const blocks = splitLyricByLabels(lyrics)
-  const allText = blocks.map(b => b.lines.join('\n').trim()).filter(Boolean).join('\n')
-  return `<div class="lyrics-block">${escapeHtml(allText)}</div>`
+  return `<div class="lyrics-block" style="white-space:pre-wrap;font-size:var(--lyric-size);line-height:1.8;">${escapeHtml(lyrics)}</div>`
 }
 
 // ============================================================
