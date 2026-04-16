@@ -374,13 +374,14 @@
       align-items: flex-end;
       justify-content: flex-start;
       width: 100%;
-      margin-bottom: 10px;
+      margin-bottom: 6px;
       line-height: 1;
     }
     .cl-unit {
       display: inline-flex;
       flex-direction: column;
       align-items: flex-start;
+      flex-shrink: 0;
     }
     .cl-unit .cl-chord-name {
       margin-bottom: 2px;
@@ -389,7 +390,7 @@
     .cl-lyric-part {
       font-size: var(--cl-size);
       color: var(--text);
-      white-space: pre;
+      white-space: pre-wrap;
       line-height: 1.5;
     }
   </style>
@@ -771,9 +772,22 @@ function renderInlineChordLyric(data) {
 
     if (!hasChord && !hasLyric) return '<div style="height:6px;"></div>'
 
+    // Lyric-only line (no chords) — render as plain text, left-aligned
+    if (!hasChord) {
+      const lyricText = segments.map(seg => seg.lyric || '').join('')
+      return `<div class="cl-lyric-line" style="font-size:var(--cl-size);margin-bottom:6px;">${escapeHtml(lyricText)}</div>`
+    }
+
     // Build positioned chord+lyric using inline-block spans
-    // Each segment = one [chord]lyric unit, displayed as a relative-positioned inline block
-    const segHtml = segments.map(seg => {
+    // Split prefix (text before first chord) out of flex flow
+    let prefixHtml = ''
+    let startIdx = 0
+    if (segments.length > 0 && !segments[0].chord && segments[0].lyric) {
+      prefixHtml = `<div class="cl-lyric-line" style="font-size:var(--cl-size);margin-bottom:2px;">${escapeHtml(segments[0].lyric)}</div>`
+      startIdx = 1
+    }
+
+    const segHtml = segments.slice(startIdx).map(seg => {
       const lyricSpan = seg.lyric
         ? `<span class="cl-lyric-part">${escapeHtml(seg.lyric)}</span>`
         : ''
@@ -791,17 +805,16 @@ function renderInlineChordLyric(data) {
     }).join('')
 
     if (!hasLyric) {
-      // Chord-only line
       const chordBadges = segments.filter(s => s.chord).map(seg => {
         const name = showAsNotes
           ? escapeHtml(tokenToChord(seg.chord, currentKeyIdx))
           : escapeHtml(seg.chord)
         return `<span class="cl-chord-name" style="margin-right:8px;">${name}</span>`
       }).join('')
-      return `<div class="cl-line"><div class="cl-chords" style="justify-content:flex-start;">${chordBadges}</div><div class="cl-lyric-line cl-instrumental">(instrumental)</div></div>`
+      return `<div class="cl-line"><div class="cl-chords" style="justify-content:flex-start;">${chordBadges}</div></div>`
     }
 
-    return `<div class="cl-line cl-inline-line">${segHtml}</div>`
+    return `${prefixHtml}<div class="cl-line cl-inline-line">${segHtml}</div>`
   }).join('')
 }
 
