@@ -372,3 +372,31 @@ function setActive(selector, activeEl) {
   document.querySelectorAll(selector).forEach(el => el.classList.remove('active'))
   if (activeEl) activeEl.classList.add('active')
 }
+
+// ============================================================
+// LYRIC HELPERS
+// ============================================================
+
+// Split plain lyrics text into labeled blocks (Verse, Chorus, etc.)
+// Returns array of { label: string|null, lines: string[] }
+function splitLyricByLabels(text) {
+  if (!text) return []
+  const LABELS = ['intro','verse','reff','chorus','bridge','outro','persembahan','pre-chorus','interlude','coda']
+  const lines = text.split('\n')
+  const blocks = []
+  let current = { label: null, lines: [] }
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    const lower = trimmed.toLowerCase()
+    const isLabel = LABELS.some(l => lower === l || lower.startsWith(l + ' ') || lower.startsWith(l + ':'))
+    if (isLabel) {
+      if (current.lines.some(l => l.trim())) blocks.push(current)
+      current = { label: trimmed, lines: [] }
+    } else {
+      current.lines.push(line)
+    }
+  }
+  blocks.push(current)
+  return blocks.filter(b => b.label || b.lines.some(l => l.trim()))
+}
