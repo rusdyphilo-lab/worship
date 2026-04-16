@@ -143,15 +143,7 @@
       <div class="kbd-wrap">
         <div class="section-label" style="margin-top:0">Chord &amp; Lirik</div>
 
-        <div class="sec-tabs" id="sec-tabs">
-          <button type="button" class="sec-tab active" onclick="switchSec('Intro',this)">Intro</button>
-          <button type="button" class="sec-tab" onclick="switchSec('Verse',this)">Verse</button>
-          <button type="button" class="sec-tab" onclick="switchSec('Reff',this)">Reff</button>
-          <button type="button" class="sec-tab" onclick="switchSec('Bridge',this)">Bridge</button>
-          <button type="button" class="sec-tab" onclick="switchSec('Outro',this)">Outro</button>
-        </div>
-
-        <textarea class="input-field" id="chord-textarea" rows="8"
+        <textarea class="input-field" id="chord-textarea" rows="12"
           placeholder="Tulis chord dalam [kurung] langsung di lirik:&#10;&#10;[1]Ku mau me[4]muji Tu[5]han[1]ku&#10;[1]'ku mau me[4]muji Ra[5]ja[1]ku&#10;&#10;Suffix: [2m] [5sus4] [1maj7] [4/5] [6m7]&#10;Enter = baris baru"
           style="resize:vertical;font-size:14px;font-family:monospace;line-height:2;letter-spacing:0.02em;"
           oninput="saveSectionText(); updatePreviewDebounced()"></textarea>
@@ -194,13 +186,11 @@ function escapeHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
 }
 
-const SECTION_NAMES = ['Intro','Verse','Reff','Bridge','Outro']
+const SECTION_NAMES = ['All']
 
 let allSongs = []
 let editingSongId = null
-let currentSec = 'Intro'
-let sections = { Intro:'', Verse:'', Reff:'', Bridge:'', Outro:'' }
-let setlistSongs = []
+let sections = { All: '' }
 let previewTimer = null
 
 // ============================================================
@@ -281,9 +271,7 @@ function resetForm() {
   document.getElementById('f-genre').value = ''
   document.getElementById('f-tempo').value = ''
   document.getElementById('f-notes').value = ''
-  sections = { Intro:'', Verse:'', Reff:'', Bridge:'', Outro:'' }
-  currentSec = 'Intro'
-  switchSec('Intro', document.querySelector('.sec-tab'))
+  sections = { All: '' }
   const ta = document.getElementById('chord-textarea')
   if (ta) ta.value = ''
 }
@@ -297,18 +285,17 @@ function populateForm(data) {
   document.getElementById('f-notes').value = data.notes || ''
 
   const raw = data.sections || {}
-  sections = {}
-  SECTION_NAMES.forEach(s => {
+  // Merge all sections into one combined text
+  const MERGE_ORDER = ['Intro','Verse','Reff','Bridge','Outro']
+  const allKeys = [...MERGE_ORDER.filter(s => raw[s]), ...Object.keys(raw).filter(s => !MERGE_ORDER.includes(s) && raw[s])]
+  const combined = allKeys.map(s => {
     const val = raw[s]
-    if (Array.isArray(val)) {
-      sections[s] = legacyTokensToInline(val)
-    } else {
-      sections[s] = val || ''
-    }
-  })
+    return Array.isArray(val) ? legacyTokensToInline(val) : (val || '')
+  }).filter(Boolean).join('\n')
+  sections = { All: combined }
 
   const ta = document.getElementById('chord-textarea')
-  if (ta) ta.value = sections[currentSec] || ''
+  if (ta) ta.value = sections.All || ''
   updatePreviewNow()
 }
 
@@ -330,19 +317,8 @@ async function saveSong() {
   const title = document.getElementById('f-title').value.trim()
   if (!title) { toast('Judul wajib diisi'); return }
 
-  // Auto-derive plain lyrics from inline sections
-  const lyricParts = []
-  SECTION_NAMES.forEach(s => {
-    if (sections[s] && sections[s].trim()) {
-      lyricParts.push(s)
-      sections[s].split('\n').forEach(line => {
-        const plain = stripChords(line).trim()
-        if (plain) lyricParts.push(plain)
-      })
-      lyricParts.push('')
-    }
-  })
-  const derivedLyrics = lyricParts.join('\n').trim() || null
+  // Derive plain lyrics by stripping chords
+  const derivedLyrics = (sections.All || '').split('\n').map(line => stripChords(line).trim()).filter(Boolean).join('\n') || null
 
   const payload = {
     title,
@@ -352,7 +328,7 @@ async function saveSong() {
     tempo: document.getElementById('f-tempo').value.trim() || null,
     notes: document.getElementById('f-notes').value.trim() || null,
     lyrics: derivedLyrics,
-    sections
+    sections: { All: sections.All || '' }
   }
 
   let error
@@ -381,19 +357,9 @@ async function deleteSong() {
 // CHORD TEXTAREA + LIVE PREVIEW
 // ============================================================
 
-function switchSec(sec, btn) {
-  const ta = document.getElementById('chord-textarea')
-  if (ta) sections[currentSec] = ta.value
-  currentSec = sec
-  document.querySelectorAll('.sec-tab').forEach(b => b.classList.remove('active'))
-  if (btn) btn.classList.add('active')
-  if (ta) ta.value = sections[currentSec] || ''
-  updatePreviewNow()
-}
-
 function saveSectionText() {
   const ta = document.getElementById('chord-textarea')
-  if (ta) sections[currentSec] = ta.value
+  if (ta) sections.All = ta.value
 }
 
 function updatePreviewDebounced() {
