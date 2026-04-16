@@ -204,6 +204,42 @@
       font-size: var(--lyric-size);
     }
 
+    /* Sectioned lyric display (when labels detected) */
+    .lyric-section {
+      margin-bottom: 20px;
+    }
+    .lyric-section:last-child {
+      margin-bottom: 0;
+    }
+    .lyric-section-name {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--hint);
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .lyric-section-badge {
+      display: inline-flex;
+      padding: 3px 10px;
+      background: var(--accent-light);
+      color: var(--accent);
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+    .lyric-section-body {
+      font-size: var(--lyric-size);
+      line-height: 1.75;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
     /* JOB #14 — Prev/Next navigation */
     .song-nav {
       display: flex;
@@ -236,6 +272,124 @@
     .song-nav-info { min-width: 0; flex: 1; }
     .song-nav-label { font-size: 11px; color: var(--hint); text-transform: uppercase; letter-spacing: 0.06em; }
     .song-nav-title { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ============================================================
+       CHORD + LIRIK MODE — chord di atas lirik
+       ============================================================ */
+    .cl-wrap {
+      --cl-size: 15px;
+    }
+    .cl-section {
+      margin-bottom: 20px;
+    }
+    .cl-section-name {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--hint);
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cl-section-badge {
+      display: inline-flex;
+      padding: 3px 10px;
+      background: var(--accent-light);
+      color: var(--accent);
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+    .cl-line {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 10px;
+    }
+    .cl-chords {
+      display: flex;
+      align-items: flex-end;
+      flex-wrap: nowrap;
+      margin-bottom: 2px;
+      min-height: 22px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: thin;
+    }
+    .cl-chords::-webkit-scrollbar { height: 3px; }
+    .cl-chords::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .cl-chord-name {
+      font-family: 'DM Mono', 'SF Mono', ui-monospace, monospace;
+      font-size: calc(var(--cl-size) * 0.82);
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--accent-light);
+      padding: 1px 7px;
+      border-radius: 5px;
+      line-height: 1.4;
+      margin-bottom: 1px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .cl-chord-name.passing {
+      background: #ede9fe;
+      color: #5b21b6;
+      border: 1px solid #c4b5fd;
+      padding: 0 5px;
+    }
+    .cl-chord-name.synco {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fcd34d;
+      padding: 0 5px;
+    }
+    @media (prefers-color-scheme: dark) {
+      .cl-chord-name.passing { background: #1e1535; color: #a78bfa; border-color: #5b21b6; }
+      .cl-chord-name.synco { background: #2d1f00; color: #fcd34d; border-color: #92400e; }
+    }
+    .cl-lyric-line {
+      font-size: var(--cl-size);
+      line-height: 1.55;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .cl-instrumental {
+      font-size: calc(var(--cl-size) * 0.85);
+      color: var(--hint);
+      font-style: italic;
+    }
+    .cl-separator {
+      height: 1px;
+      background: var(--border);
+      margin: 14px 0;
+    }
+
+    /* Inline chord+lyric units */
+    .cl-inline-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      margin-bottom: 10px;
+      line-height: 1;
+    }
+    .cl-unit {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .cl-unit .cl-chord-name {
+      margin-bottom: 2px;
+      align-self: flex-start;
+    }
+    .cl-lyric-part {
+      font-size: var(--cl-size);
+      color: var(--text);
+      white-space: pre;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
@@ -271,6 +425,7 @@ let currentTab = 'chord'
 let showAsNotes = true
 let chordSize = 15
 let lyricSize = 15
+let clSize = 15  // Chord+Lirik font size
 let wakeLock = null  // JOB #13
 
 const params = new URLSearchParams(location.search)
@@ -366,6 +521,7 @@ function render() {
     ${hasLyrics ? `
     <div class="tab-row">
       <button class="tab-btn ${currentTab==='chord'?'active':''}" onclick="switchTab('chord')">Chord</button>
+      <button class="tab-btn ${currentTab==='both'?'active':''}" onclick="switchTab('both')">Chord+Lirik</button>
       <button class="tab-btn ${currentTab==='lyric'?'active':''}" onclick="switchTab('lyric')">Lirik</button>
     </div>` : ''}
 
@@ -400,6 +556,35 @@ function render() {
       </div>
     </div>
 
+    <!-- CHORD+LIRIK TAB -->
+    ${hasLyrics ? `
+    <div id="tab-both" style="display:${currentTab==='both'?'block':'none'}">
+      <div class="key-bar">
+        <span class="key-bar-label">Key</span>
+        <button class="t-btn" onclick="transpose(-1)">−</button>
+        <div class="current-key" id="cur-key-both">${KEYS[currentKeyIdx]}</div>
+        <button class="t-btn" onclick="transpose(+1)">+</button>
+
+        <div class="key-bar-spacer"></div>
+
+        <div class="toggle-wrap" onclick="toggleMode()">
+          <span id="mode-label-both">${showAsNotes ? 'Nada' : 'Angka'}</span>
+          <div class="toggle-track ${showAsNotes ? 'on' : ''}" id="mode-toggle-both">
+            <div class="toggle-thumb"></div>
+          </div>
+        </div>
+
+        <div class="font-bar">
+          <button class="font-btn" onclick="changeClSize(-1)">A−</button>
+          <button class="font-btn" onclick="changeClSize(+1)">A+</button>
+        </div>
+      </div>
+
+      <div class="cl-wrap" id="cl-wrap" style="--cl-size:${clSize}px">
+        ${renderChordLyricMode()}
+      </div>
+    </div>` : ''}
+
     <!-- LYRIC TAB -->
     ${hasLyrics ? `
     <div id="tab-lyric" style="display:${currentTab==='lyric'?'block':'none'}">
@@ -411,7 +596,7 @@ function render() {
         </div>
       </div>
       <div class="lyrics-wrap" id="lyrics-wrap" style="--lyric-size:${lyricSize}px">
-        <div class="lyrics-block">${escapeHtml(song.lyrics)}</div>
+        ${renderLyricMode()}
       </div>
     </div>` : ''}
 
@@ -442,8 +627,7 @@ function render() {
 }
 
 // ============================================================
-// JOB #1 — CHORD RENDERING PER BARIS
-// Sections stored as array-of-arrays (lines) or flat array
+// CHORD RENDERING — Inline [chord]lyric format
 // ============================================================
 
 function renderChordSections() {
@@ -458,84 +642,221 @@ function renderChordSections() {
 
   const order = SECTION_ORDER.filter(s => hasContent(sections[s]))
   const extras = Object.keys(sections).filter(s => !SECTION_ORDER.includes(s) && hasContent(sections[s]))
+  const allSecs = [...order, ...extras]
 
-  if ([...order, ...extras].length === 0) {
+  if (allSecs.length === 0) {
     return '<div class="empty"><div class="empty-icon">🎸</div><div class="empty-title">Progresi chord belum tersedia.</div></div>'
   }
 
-  return [...order, ...extras].map(secName => {
+  const allChordsHtml = allSecs.map(secName => {
     const data = sections[secName]
-    return `
-      <div class="chord-section">
-        <div class="chord-section-name">${secName}</div>
-        ${renderSectionLines(data)}
-      </div>
-    `
+    return renderSectionChordOnly(data)
+  }).filter(Boolean).join('')
+
+  return `<div class="chord-section">${allChordsHtml}</div>`
+}
+
+// Render chord-only view from inline [chord]lyric text
+function renderSectionChordOnly(data) {
+  if (!data) return ''
+  const text = typeof data === 'string' ? data : legacyToText(data)
+  if (!text.trim()) return ''
+
+  // If new inline format
+  if (isInlineFormat(text)) {
+    const lines = parseInlineSection(text)
+    return lines.map(segments => {
+      const chords = segments.filter(seg => seg.chord)
+      if (chords.length === 0) return ''
+      const pills = chords.map(seg => {
+        if (showAsNotes) {
+          return `<span class="chord-pill">${escapeHtml(tokenToChord(seg.chord, currentKeyIdx))}</span>`
+        } else {
+          return `<span class="chord-pill num-mode">${escapeHtml(seg.chord)}</span>`
+        }
+      }).join(' ')
+      return `<div class="chord-line">${pills}</div>`
+    }).filter(Boolean).join('')
+  }
+
+  // Legacy plain token format fallback
+  const tokens = normalizeSectionTokens(data)
+  if (!tokens || tokens === null || tokens.length === 0) return ''
+  const lines2 = []
+  let cur = []
+  for (const t of tokens) {
+    if (t === '\n') { lines2.push(cur); cur = [] }
+    else cur.push(t)
+  }
+  lines2.push(cur)
+  return lines2.filter(l => l.length > 0).map(line => {
+    return `<div class="chord-line">${renderTokensLegacy(line)}</div>`
   }).join('')
 }
 
-function renderSectionLines(data) {
-  if (!data) return ''
-
-  // Normalize to token array via supabase.js helper
-  const tokens = normalizeSectionTokens(data)
-  if (!tokens.length) return ''
-
-  // Split on '\n' into lines
-  const lines = []
-  let cur = []
-  for (const t of tokens) {
-    if (t === '\n') { lines.push(cur); cur = [] }
-    else cur.push(t)
-  }
-  lines.push(cur)
-
-  return lines
-    .filter(line => line.length > 0)
-    .map(line => `<div class="chord-line">${renderTokens(line)}</div>`)
-    .join('')
-}
-
-function renderTokens(tokens) {
+function renderTokensLegacy(tokens) {
   if (!tokens || tokens.length === 0) return ''
-
   return tokens.map(t => {
     if (t === '|') return '<span class="chord-sep">|</span>'
-    if (t === '/') return '<span class="chord-sep">/</span>'
     if (t === '.') return '<span class="chord-dot">\xB7</span>'
-
-    // Sinkopasi (kurung) — kuning amber
-    if (t.startsWith('(') && t.endsWith(')')) {
-      const inner = t.slice(1, -1)
-      const parts = splitPassingTokens(inner)
-      if (showAsNotes) {
-        const pills = parts.map(p => '<span class="passing-inner">' + tokenToChord(p, currentKeyIdx) + '</span>').join('')
-        return '<span class="chord-pill synco-pill">(' + pills + ')</span>'
-      } else {
-        const pills = parts.map(p => '<span class="passing-inner">' + p + '</span>').join('')
-        return '<span class="chord-pill synco-pill num-mode">(' + pills + ')</span>'
-      }
-    }
-
-    // Passing/rapat (tanpa kurung) — ungu
-    if (isPassingToken(t)) {
-      const parts = splitPassingTokens(t)
-      if (showAsNotes) {
-        const pills = parts.map(p => '<span class="passing-inner">' + tokenToChord(p, currentKeyIdx) + '</span>').join('')
-        return '<span class="chord-pill passing-pill">' + pills + '</span>'
-      } else {
-        const pills = parts.map(p => '<span class="passing-inner">' + p + '</span>').join('')
-        return '<span class="chord-pill passing-pill num-mode">' + pills + '</span>'
-      }
-    }
-
-    // Chord biasa
-    if (showAsNotes) {
-      return '<span class="chord-pill">' + tokenToChord(t, currentKeyIdx) + '</span>'
-    } else {
-      return '<span class="chord-pill num-mode">' + t + '</span>'
-    }
+    if (showAsNotes) return '<span class="chord-pill">' + escapeHtml(tokenToChord(t, currentKeyIdx)) + '</span>'
+    return '<span class="chord-pill num-mode">' + escapeHtml(t) + '</span>'
   }).join(' ')
+}
+
+function legacyToText(arr) {
+  if (!Array.isArray(arr)) return ''
+  let text = ''
+  arr.forEach(t => {
+    if (!t || typeof t !== 'string' || !t.trim()) return
+    if (t === '\n') { text += '\n'; return }
+    if (text && !text.endsWith('\n') && !text.endsWith(' ')) text += ' '
+    text += t
+  })
+  return text.trim()
+}
+
+// ============================================================
+// CHORD + LIRIK MODE — inline [chord]lyric aligned rendering
+// ============================================================
+
+function renderChordLyricMode() {
+  const sections = song.sections || {}
+
+  function hasContent(v) {
+    if (!v) return false
+    if (typeof v === 'string') return v.trim().length > 0
+    if (Array.isArray(v)) return v.length > 0
+    return false
+  }
+
+  const order = SECTION_ORDER.filter(s => hasContent(sections[s]))
+  const extras = Object.keys(sections).filter(s => !SECTION_ORDER.includes(s) && hasContent(sections[s]))
+  const allSecs = [...order, ...extras]
+
+  if (allSecs.length === 0) {
+    return '<div class="empty"><div class="empty-icon">🎵</div><div class="empty-title">Belum ada konten.</div></div>'
+  }
+
+  return allSecs.map(secName => {
+    const data = sections[secName]
+    const linesHtml = renderInlineChordLyric(data)
+    return `
+      <div class="cl-section">
+        <div class="cl-section-name">
+          <span class="cl-section-badge">${escapeHtml(secName)}</span>
+        </div>
+        ${linesHtml}
+      </div>
+    `
+  }).join('<div class="cl-separator"></div>')
+}
+
+// Render one section of inline [chord]lyric text as aligned chord+lyric lines
+function renderInlineChordLyric(data) {
+  if (!data) return ''
+  const text = typeof data === 'string' ? data : legacyToText(data)
+  if (!text.trim()) return ''
+
+  if (!isInlineFormat(text)) {
+    // Legacy: show chords only (no lyric alignment possible)
+    return renderSectionChordOnly(data)
+  }
+
+  const lines = parseInlineSection(text)
+  return lines.map(segments => {
+    const hasChord = segments.some(seg => seg.chord)
+    const hasLyric = segments.some(seg => seg.lyric && seg.lyric.trim())
+
+    if (!hasChord && !hasLyric) return '<div style="height:6px;"></div>'
+
+    // Build positioned chord+lyric using inline-block spans
+    // Each segment = one [chord]lyric unit, displayed as a relative-positioned inline block
+    const segHtml = segments.map(seg => {
+      const lyricSpan = seg.lyric
+        ? `<span class="cl-lyric-part">${escapeHtml(seg.lyric)}</span>`
+        : ''
+
+      if (seg.chord) {
+        const chordName = showAsNotes
+          ? escapeHtml(tokenToChord(seg.chord, currentKeyIdx))
+          : escapeHtml(seg.chord)
+        return `<span class="cl-unit">` +
+          `<span class="cl-chord-name">${chordName}</span>` +
+          lyricSpan +
+          `</span>`
+      }
+      return lyricSpan ? `<span class="cl-unit">${lyricSpan}</span>` : ''
+    }).join('')
+
+    if (!hasLyric) {
+      // Chord-only line
+      const chordBadges = segments.filter(s => s.chord).map(seg => {
+        const name = showAsNotes
+          ? escapeHtml(tokenToChord(seg.chord, currentKeyIdx))
+          : escapeHtml(seg.chord)
+        return `<span class="cl-chord-name" style="margin-right:8px;">${name}</span>`
+      }).join('')
+      return `<div class="cl-line"><div class="cl-chords" style="justify-content:flex-start;">${chordBadges}</div><div class="cl-lyric-line cl-instrumental">(instrumental)</div></div>`
+    }
+
+    return `<div class="cl-line cl-inline-line">${segHtml}</div>`
+  }).join('')
+}
+
+// ============================================================
+// LIRIK MODE — strip chords, render plain lyrics
+// ============================================================
+
+function renderLyricMode() {
+  // Build lyrics from sections (strip chord markers) if song.lyrics is empty
+  let lyrics = song.lyrics || ''
+
+  // If lyrics is empty but sections exist, derive from sections
+  if (!lyrics.trim() && song.sections) {
+    const parts = []
+    SECTION_ORDER.forEach(s => {
+      const d = song.sections[s]
+      if (!d) return
+      const text = typeof d === 'string' ? d : legacyToText(d)
+      if (!text.trim()) return
+      parts.push(s)
+      text.split('\n').forEach(line => {
+        const plain = stripChords(line).trim()
+        if (plain) parts.push(plain)
+      })
+      parts.push('')
+    })
+    lyrics = parts.join('\n').trim()
+  }
+
+  if (!lyrics.trim()) {
+    return '<div class="empty"><div class="empty-icon">🎵</div><div class="empty-title">Belum ada lirik.</div></div>'
+  }
+
+  // Strip any remaining chord markers from lyrics field
+  lyrics = lyrics.replace(/\[[^\]]*\]/g, '')
+
+  const blocks = splitLyricByLabels(lyrics)
+  const labeledCount = blocks.filter(b => b.label).length
+
+  if (labeledCount < 2) {
+    return `<div class="lyrics-block">${escapeHtml(lyrics)}</div>`
+  }
+
+  return blocks.map(b => {
+    const body = b.lines.join('\n').trim()
+    if (!body && !b.label) return ''
+    const header = b.label
+      ? `<div class="lyric-section-name"><span class="lyric-section-badge">${escapeHtml(b.label)}</span></div>`
+      : ''
+    return `
+      <div class="lyric-section">
+        ${header}
+        <div class="lyric-section-body">${escapeHtml(body)}</div>
+      </div>
+    `
+  }).join('')
 }
 
 // ============================================================
@@ -550,8 +871,12 @@ function transpose(delta) {
 function updateChords() {
   const curKeyEl = document.getElementById('cur-key')
   if (curKeyEl) curKeyEl.textContent = KEYS[currentKeyIdx]
+  const curKeyBoth = document.getElementById('cur-key-both')
+  if (curKeyBoth) curKeyBoth.textContent = KEYS[currentKeyIdx]
   const wrap = document.getElementById('chord-sections-wrap')
   if (wrap) wrap.innerHTML = renderChordSections()
+  const clWrap = document.getElementById('cl-wrap')
+  if (clWrap) clWrap.innerHTML = renderChordLyricMode()
 }
 
 function toggleMode() {
@@ -560,6 +885,10 @@ function toggleMode() {
   const toggle = document.getElementById('mode-toggle')
   if (label) label.textContent = showAsNotes ? 'Nada' : 'Angka'
   if (toggle) toggle.classList.toggle('on', showAsNotes)
+  const labelBoth = document.getElementById('mode-label-both')
+  const toggleBoth = document.getElementById('mode-toggle-both')
+  if (labelBoth) labelBoth.textContent = showAsNotes ? 'Nada' : 'Angka'
+  if (toggleBoth) toggleBoth.classList.toggle('on', showAsNotes)
   updateChords()
 }
 
@@ -567,6 +896,12 @@ function changeSize(delta) {
   chordSize = Math.max(12, Math.min(28, chordSize + delta * 2))
   const wrap = document.getElementById('chord-sections-wrap')
   if (wrap) wrap.style.setProperty('--chord-size', chordSize + 'px')
+}
+
+function changeClSize(delta) {
+  clSize = Math.max(12, Math.min(28, clSize + delta * 2))
+  const wrap = document.getElementById('cl-wrap')
+  if (wrap) wrap.style.setProperty('--cl-size', clSize + 'px')
 }
 
 function changeLyricSize(delta) {
@@ -579,10 +914,16 @@ function switchTab(tab) {
   currentTab = tab
   const chord = document.getElementById('tab-chord')
   const lyric = document.getElementById('tab-lyric')
+  const both = document.getElementById('tab-both')
   if (chord) chord.style.display = tab === 'chord' ? 'block' : 'none'
   if (lyric) lyric.style.display = tab === 'lyric' ? 'block' : 'none'
-  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
-    btn.classList.toggle('active', (i === 0 && tab === 'chord') || (i === 1 && tab === 'lyric'))
+  if (both) both.style.display = tab === 'both' ? 'block' : 'none'
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    const label = (btn.textContent || '').trim().toLowerCase()
+    const match = (tab === 'chord' && label === 'chord')
+      || (tab === 'both' && label === 'chord+lirik')
+      || (tab === 'lyric' && label === 'lirik')
+    btn.classList.toggle('active', match)
   })
 }
 

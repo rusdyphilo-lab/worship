@@ -10,114 +10,250 @@ const { createClient } = supabase
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 // ============================================================
-// CHORD TRANSPOSER
+// CHORD TRANSPOSER — Nashville Number System
+// Format input: [1]Ku mau me[4]muji Tu[5]han[1]ku
+// Suffix lengkap: m, M, 7, m7, maj7, sus2, sus4, add9, dim, aug, dll.
+// Slash chord: [4/5] [1M/3]
 // ============================================================
 
 const KEYS = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
 const FLAT_MAP = {'C#':'Db','D#':'Eb','F#':'Gb','G#':'Ab','A#':'Bb'}
 
-// Semitone intervals per degree — m/M hanya ubah quality, bukan root
-const INTERVALS = {
-  '1':0,  '1m':0,  '1M':0,
-  '2':2,  '2m':2,  '2M':2,
-  '3':4,  '3m':4,  '3M':4,
-  '4':5,  '4m':5,  '4M':5,  '4#':6,
-  '5':7,  '5m':7,  '5M':7,  '5#':8,
-  '6':9,  '6m':9,  '6M':9,
-  '7':11, '7m':11, '7M':11,
+// Semitone interval per degree (root position)
+const DEGREE_SEMITONES = { '1':0, '2':2, '3':4, '4':5, '5':7, '6':9, '7':11 }
+
+// Raised degree: 4# = tritone (6st), 5# = augmented (8st)
+const DEGREE_SHARP     = { '4':6, '5':8 }
+
+// Diatonic defaults (no explicit quality suffix)
+// 1=maj, 2=min, 3=min, 4=maj, 5=maj, 6=min, 7=dim
+const DEFAULT_QUALITY  = { '1':'maj','2':'min','3':'min','4':'maj','5':'maj','6':'min','7':'dim' }
+
+// Suffix normalization → canonical quality tag
+// Determines what gets appended to the root note
+const SUFFIX_MAP = {
+  // minor
+  'm':    'min',
+  'min':  'min',
+  // major (explicit)
+  'M':    'maj',
+  'maj':  'maj',
+  // dominant 7
+  '7':    '7',
+  // minor 7
+  'm7':   'm7',
+  'min7': 'm7',
+  // major 7
+  'maj7': 'maj7',
+  'M7':   'maj7',
+  // minor major 7
+  'mM7':  'mMaj7',
+  'minMaj7': 'mMaj7',
+  // sus
+  'sus2': 'sus2',
+  'sus4': 'sus4',
+  'sus':  'sus4',
+  // add
+  'add9': 'add9',
+  'add2': 'add9',
+  // diminished
+  'dim':  'dim',
+  'dim7': 'dim7',
+  // augmented
+  'aug':  'aug',
+  '+':    'aug',
+  // 6, 9
+  '6':    '6',
+  'm6':   'm6',
+  '9':    '9',
+  'm9':   'm9',
+  'maj9': 'maj9',
+  // extended
+  '11':   '11',
+  '13':   '13',
 }
 
-// Diatonic default quality: true = minor, false = major
-// 1=major, 2=minor, 3=minor, 4=major, 5=major, 6=minor, 7=dim
-const DEFAULT_MINOR = { '1':false, '2':true, '3':true, '4':false, '5':false, '6':true, '7':false }
-const DEFAULT_DIM   = { '7':true }
+// What string to append to note name for each canonical quality
+const QUALITY_DISPLAY = {
+  'maj':    '',
+  'min':    'm',
+  '7':      '7',
+  'm7':     'm7',
+  'maj7':   'maj7',
+  'mMaj7':  'mMaj7',
+  'sus2':   'sus2',
+  'sus4':   'sus4',
+  'dim':    'dim',
+  'dim7':   'dim7',
+  'aug':    'aug',
+  '6':      '6',
+  'm6':     'm6',
+  '9':      '9',
+  'm9':     'm9',
+  'maj9':   'maj9',
+  'add9':   'add9',
+  '11':     '11',
+  '13':     '13',
+}
 
-function tokenToChord(token, keyIdx) {
-  if (!token || token === '|' || token === '/') return token
-  if (token.startsWith('(')) return token
+// Regex to parse a Nashville token:
+// Examples: 1  2m  4M  5#  3m7  4maj7  5sus4  6dim  1add9  4#  4/5  4M/3  5sus4/1
+// Group 1: degree (1-7)
+// Group 2: sharp modifier (#) — only valid on 4 and 5
+// Group 3: quality suffix (everything before optional slash)
+// Group 4: slash bass degree+sharp+suffix
+const TOKEN_RE = /^([1-7])(#?)([a-zA-Z0-9]*?)(?:\/([1-7]#?[a-zA-Z0-9]*))?$/
 
-  // handle slash chord: e.g. 4/5 or 4M/5
-  let base = token, slashDeg = ''
-  const slashIdx = token.indexOf('/')
-  if (slashIdx > 0) {
-    base = token.slice(0, slashIdx)
-    slashDeg = token.slice(slashIdx + 1)
-  }
+function parseDegree(str) {
+  // str: e.g. "4", "4#", "3m", "5sus4", "1maj7"
+  // Returns { semitones, quality } or null
+  const m = str.match(/^([1-7])(#?)([a-zA-Z0-9]*)$/)
+  if (!m) return null
+  const deg      = m[1]
+  const isSharp  = m[2] === '#'
+  const suffixRaw = m[3] || ''
 
-  // Parse degree and explicit quality suffix
-  // token format: <degree>[m|M][#]  e.g. "3", "3m", "3M", "4#", "2m"
-  const match = base.match(/^([1-7])([mM]?)([#]?)$/)
-  if (!match) return token
+  let semitones = DEGREE_SEMITONES[deg] ?? 0
+  if (isSharp) semitones = DEGREE_SHARP[deg] ?? semitones + 1
 
-  const deg = match[1]           // '1'–'7'
-  const qualSuffix = match[2]    // 'm', 'M', or ''
-  const sharpSuffix = match[3]   // '#' or ''
-
-  // Determine semitone interval
-  const intervalKey = deg + qualSuffix + sharpSuffix
-  let semitones = INTERVALS[intervalKey]
-  if (semitones === undefined) semitones = INTERVALS[deg + qualSuffix] ?? INTERVALS[deg] ?? 0
-
-  // Determine quality
-  let isMinor, isDim
-  if (qualSuffix === 'm') {
-    isMinor = true; isDim = false
-  } else if (qualSuffix === 'M') {
-    isMinor = false; isDim = false
+  // Resolve quality
+  let quality
+  if (suffixRaw === '') {
+    quality = DEFAULT_QUALITY[deg] ?? 'maj'
   } else {
-    // Use diatonic default
-    isMinor = DEFAULT_MINOR[deg] ?? false
-    isDim   = DEFAULT_DIM[deg] ?? false
-  }
-
-  const noteIdx = (keyIdx + semitones) % 12
-  let note = KEYS[noteIdx]
-  if (FLAT_MAP[note]) note = FLAT_MAP[note]
-
-  let chord = note
-  if (isDim)       chord += 'dim'
-  else if (isMinor) chord += 'm'
-
-  // Slash bass
-  if (slashDeg) {
-    const slashMatch = slashDeg.match(/^([1-7])([mM]?)([#]?)$/)
-    if (slashMatch) {
-      const sKey = slashMatch[1] + slashMatch[2] + slashMatch[3]
-      const sSemitones = INTERVALS[sKey] ?? INTERVALS[slashMatch[1] + slashMatch[2]] ?? INTERVALS[slashMatch[1]] ?? 0
-      let slashNote = KEYS[(keyIdx + sSemitones) % 12]
-      if (FLAT_MAP[slashNote]) slashNote = FLAT_MAP[slashNote]
-      chord += '/' + slashNote
+    quality = SUFFIX_MAP[suffixRaw] ?? SUFFIX_MAP[suffixRaw.toLowerCase()] ?? null
+    if (!quality) {
+      // Unknown suffix — pass through raw
+      quality = '__raw__' + suffixRaw
     }
   }
 
-  return chord
+  return { semitones, quality }
 }
 
-// Parse plain text chord string → token array
-function parseChordText(str) {
-  if (!str || !str.trim()) return []
-  const tokens = []
-  const lines = str.split('\n')
-  lines.forEach((line, lineIdx) => {
-    const parts = line.trim().split(/\s+/).filter(Boolean)
-    parts.forEach(p => tokens.push(p))
-    if (lineIdx < lines.length - 1 && line.trim()) tokens.push('\n')
-  })
-  while (tokens.length && tokens[tokens.length - 1] === '\n') tokens.pop()
-  return tokens
+function degreeToNote(keyIdx, semitones) {
+  const noteIdx = (keyIdx + semitones) % 12
+  const note = KEYS[noteIdx]
+  return FLAT_MAP[note] || note
 }
 
-// Normalize section data: always return clean token array
+// Convert a single Nashville token → chord name
+// token: e.g. "1", "4m", "5sus4", "4/5", "1maj7/3"
+function tokenToChord(token, keyIdx) {
+  if (!token) return token
+
+  const m = token.match(TOKEN_RE)
+  if (!m) return token  // unrecognized — pass through
+
+  const baseParsed = parseDegree(m[1] + m[2] + m[3])
+  if (!baseParsed) return token
+
+  const rootNote = degreeToNote(keyIdx, baseParsed.semitones)
+  let quality = baseParsed.quality
+
+  let chordName
+  if (quality && quality.startsWith('__raw__')) {
+    chordName = rootNote + quality.slice(7)
+  } else {
+    const display = QUALITY_DISPLAY[quality] ?? ''
+    chordName = rootNote + display
+  }
+
+  // Slash bass
+  if (m[4]) {
+    const bassParsed = parseDegree(m[4])
+    if (bassParsed) {
+      const bassNote = degreeToNote(keyIdx, bassParsed.semitones)
+      chordName += '/' + bassNote
+    }
+  }
+
+  return chordName
+}
+
+// ============================================================
+// INLINE FORMAT PARSER  [chord]lyric text
+// ============================================================
+
+// Strip all [chord] markers from a string → plain lyric text
+function stripChords(str) {
+  if (!str) return ''
+  return str.replace(/\[[^\]]*\]/g, '')
+}
+
+// Parse one line of "[chord]lyric" format into segments:
+// Returns array of { chord: string|null, lyric: string }
+// chord is the Nashville token inside [], lyric is text after it until next [
+// Lines with no [] at all return [{ chord: null, lyric: fullLine }]
+function parseInlineLine(line) {
+  if (!line) return [{ chord: null, lyric: '' }]
+
+  const segments = []
+  const re = /\[([^\]]*)\]/g
+  let lastIndex = 0
+  let match
+
+  // Text before first chord marker
+  while ((match = re.exec(line)) !== null) {
+    const lyricBefore = line.slice(lastIndex, match.index)
+    // Attach lyric before this chord to previous segment, or make a no-chord prefix
+    if (segments.length === 0 && lyricBefore) {
+      segments.push({ chord: null, lyric: lyricBefore })
+    } else if (segments.length > 0 && lyricBefore) {
+      segments[segments.length - 1].lyric += lyricBefore
+    }
+    segments.push({ chord: match[1], lyric: '' })
+    lastIndex = re.lastIndex
+  }
+
+  // Remaining text after last chord
+  const tail = line.slice(lastIndex)
+  if (segments.length === 0) {
+    // No chord markers at all
+    return [{ chord: null, lyric: line }]
+  }
+  if (tail) segments[segments.length - 1].lyric += tail
+
+  return segments
+}
+
+// Parse full section text into lines of segments
+// Returns: [ [ {chord, lyric}, ... ], ... ]
+function parseInlineSection(text) {
+  if (!text || !text.trim()) return []
+  return text.split('\n').map(parseInlineLine)
+}
+
+// Extract only chord tokens from a section text (for chord-only tab)
+// Returns array of arrays (lines of tokens)
+function extractChordLines(text) {
+  if (!text || !text.trim()) return []
+  return text.split('\n').map(line => {
+    const chords = []
+    const re = /\[([^\]]+)\]/g
+    let m
+    while ((m = re.exec(line)) !== null) {
+      if (m[1].trim()) chords.push(m[1].trim())
+    }
+    return chords
+  }).filter(line => line.length > 0)
+}
+
+// ============================================================
+// LEGACY SUPPORT — normalize old token array / plain text (no inline)
+// ============================================================
+
 function normalizeSectionTokens(data) {
   if (!data) return []
   let arr
   if (typeof data === 'string') {
-    arr = parseChordText(data)
+    // New format detection: contains [...]
+    if (data.includes('[')) return null // signal to use inline renderer
+    // Old plain text format
+    arr = parseChordTextLegacy(data)
   } else if (Array.isArray(data)) {
-    // Legacy flat token array — may contain nulls, empty strings, or nested arrays
     if (data.length === 0) return []
     if (Array.isArray(data[0])) {
-      // array-of-arrays: flatten with \n between lines
       arr = []
       data.forEach((line, i) => {
         if (Array.isArray(line)) arr.push(...line)
@@ -130,11 +266,10 @@ function normalizeSectionTokens(data) {
   } else {
     return []
   }
-  // Filter: keep only valid tokens
   return arr.filter(function(t) {
     if (!t || typeof t !== 'string') return false
     if (t === '\n') return true
-    var s = t.trim()
+    const s = t.trim()
     if (!s) return false
     if (s === '|' || s === '.') return true
     if (s.startsWith('(') && s.endsWith(')')) return true
@@ -142,16 +277,31 @@ function normalizeSectionTokens(data) {
   })
 }
 
-// Detect if a token is a "passing/rapat" group: multiple degrees written together
-// e.g. "3m2#2m", "145", "4m5"
+function parseChordTextLegacy(str) {
+  if (!str || !str.trim()) return []
+  const tokens = []
+  const lines = str.split('\n')
+  lines.forEach((line, lineIdx) => {
+    const parts = line.trim().split(/\s+/).filter(Boolean)
+    parts.forEach(p => tokens.push(p))
+    if (lineIdx < lines.length - 1 && line.trim()) tokens.push('\n')
+  })
+  while (tokens.length && tokens[tokens.length - 1] === '\n') tokens.pop()
+  return tokens
+}
+
+// isInlineFormat: returns true if section text uses [chord] markers
+function isInlineFormat(data) {
+  if (typeof data !== 'string') return false
+  return data.includes('[')
+}
+
 function isPassingToken(t) {
   if (!t || t === '|' || t === '.' || t.startsWith('(')) return false
-  const single = /^[1-7][mM]?[#]?(\/[1-7][mM]?[#]?)?$/
+  const single = /^[1-7]#?[a-zA-Z0-9]*(\/[1-7]#?[a-zA-Z0-9]*)?$/
   return !single.test(t) && /[1-7]/.test(t)
 }
 
-// Split a passing group string into individual chord tokens
-// "3m2#2m" → ["3m","2#","2m"]
 function splitPassingTokens(t) {
   return t.match(/[1-7][mM]?[#]?/g) || [t]
 }
@@ -161,27 +311,19 @@ function renderProgression(tokens, keyIdx) {
   if (!arr || arr.length === 0) return ''
   return arr.map(t => {
     if (t === '|') return '<span class="chord-sep">|</span>'
-    if (t === '/') return '<span class="chord-sep">/</span>'
-    if (t === ' ') return '<span style="display:inline-block;width:6px"></span>'
     if (t === '.') return '<span class="chord-dot">\xB7</span>'
     if (t === '\n') return ''
-
-    // Sinkopasi group (kurung) — kuning amber
     if (t.startsWith('(') && t.endsWith(')')) {
       const inner = t.slice(1, -1)
       const parts = splitPassingTokens(inner)
       const pills = parts.map(p => '<span class="passing-inner">' + tokenToChord(p, keyIdx) + '</span>').join('')
       return '<span class="chord-pill synco-pill">(' + pills + ')</span>'
     }
-
-    // Passing/rapat group (tanpa kurung) — ungu
     if (isPassingToken(t)) {
       const parts = splitPassingTokens(t)
       const pills = parts.map(p => '<span class="passing-inner">' + tokenToChord(p, keyIdx) + '</span>').join('')
       return '<span class="chord-pill passing-pill">' + pills + '</span>'
     }
-
-    // Chord biasa
     return '<span class="chord-pill">' + tokenToChord(t, keyIdx) + '</span>'
   }).join(' ')
 }

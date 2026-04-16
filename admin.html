@@ -139,9 +139,9 @@
         <input class="input-field" id="f-notes" type="text" placeholder="ambil ending, tunggu sign MD..." />
       </div>
 
-      <!-- Chord progression input -->
+      <!-- Chord + Lirik inline editor -->
       <div class="kbd-wrap">
-        <div class="section-label" style="margin-top:0">Progresi Chord</div>
+        <div class="section-label" style="margin-top:0">Chord &amp; Lirik</div>
 
         <div class="sec-tabs" id="sec-tabs">
           <button type="button" class="sec-tab active" onclick="switchSec('Intro',this)">Intro</button>
@@ -151,20 +151,25 @@
           <button type="button" class="sec-tab" onclick="switchSec('Outro',this)">Outro</button>
         </div>
 
-        <textarea class="input-field" id="chord-textarea" rows="4"
-          placeholder="Ketik atau tempel progresi chord&#10;contoh: 1 2m 4 5 | 1 4M#/5 1&#10;&#10;Spasi = antar chord, | = garis bar, enter = baris baru"
-          style="resize:vertical;font-size:15px;font-family:monospace;line-height:1.8;letter-spacing:0.03em;"
-          oninput="saveSectionText()"></textarea>
+        <textarea class="input-field" id="chord-textarea" rows="8"
+          placeholder="Tulis chord dalam [kurung] langsung di lirik:&#10;&#10;[1]Ku mau me[4]muji Tu[5]han[1]ku&#10;[1]'ku mau me[4]muji Ra[5]ja[1]ku&#10;&#10;Suffix: [2m] [5sus4] [1maj7] [4/5] [6m7]&#10;Enter = baris baru"
+          style="resize:vertical;font-size:14px;font-family:monospace;line-height:2;letter-spacing:0.02em;"
+          oninput="saveSectionText(); updatePreviewDebounced()"></textarea>
 
-        <div class="hint-text">Ketik bebas — spasi antar chord, | untuk bar, Enter untuk baris baru</div>
-      </div>
+        <div class="hint-text">
+          Chord dalam <code style="background:var(--accent-light);color:var(--accent);padding:1px 5px;border-radius:4px;font-size:11px;">[kurung]</code>
+          langsung di baris lirik &nbsp;&middot;&nbsp;
+          Suffix: m, 7, m7, maj7, sus4, dim, aug, add9 &nbsp;&middot;&nbsp;
+          Slash: [4/5]
+        </div>
 
-      <!-- Lyrics -->
-      <div class="form-group">
-        <label class="form-label">Lirik</label>
-        <textarea class="input-field" id="f-lyrics" rows="8"
-          placeholder="Tempel lirik dari Easy Worship di sini...&#10;&#10;Verse 1&#10;...&#10;&#10;Reff&#10;..."
-          style="resize:vertical;font-size:14px;line-height:1.7;"></textarea>
+        <!-- Live preview -->
+        <div id="chord-preview" style="margin-top:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);min-height:36px;font-size:13px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--hint);margin-bottom:6px;">
+            Preview &nbsp;&middot;&nbsp; Key <span id="preview-key">C</span>
+          </div>
+          <div id="preview-content" style="font-family:monospace;line-height:2.4;white-space:pre-wrap;"></div>
+        </div>
       </div>
 
       <div class="btn-row">
@@ -184,18 +189,19 @@
 // ============================================================
 // STATE
 // ============================================================
-// JOB #19 — XSS sanitization helper
 function escapeHtml(str) {
   if (!str) return ''
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
 }
 
+const SECTION_NAMES = ['Intro','Verse','Reff','Bridge','Outro']
+
 let allSongs = []
 let editingSongId = null
 let currentSec = 'Intro'
-let activeMods = []
 let sections = { Intro:'', Verse:'', Reff:'', Bridge:'', Outro:'' }
-let setlistSongs = [] // [{song, keyUsed, note}]
+let setlistSongs = []
+let previewTimer = null
 
 // ============================================================
 // PANEL SWITCHING
@@ -260,6 +266,7 @@ async function openSongForm(id = null) {
 
   document.getElementById('song-modal').style.display = 'block'
   document.body.style.overflow = 'hidden'
+  updatePreviewNow()
 }
 
 function closeModal() {
@@ -274,10 +281,8 @@ function resetForm() {
   document.getElementById('f-genre').value = ''
   document.getElementById('f-tempo').value = ''
   document.getElementById('f-notes').value = ''
-  document.getElementById('f-lyrics').value = ''
   sections = { Intro:'', Verse:'', Reff:'', Bridge:'', Outro:'' }
   currentSec = 'Intro'
-  activeMods = []
   switchSec('Intro', document.querySelector('.sec-tab'))
   const ta = document.getElementById('chord-textarea')
   if (ta) ta.value = ''
@@ -290,47 +295,54 @@ function populateForm(data) {
   document.getElementById('f-genre').value = data.genre || ''
   document.getElementById('f-tempo').value = data.tempo || ''
   document.getElementById('f-notes').value = data.notes || ''
-  document.getElementById('f-lyrics').value = data.lyrics || ''
 
-  // sections bisa berupa object of plain text strings ATAU object of token arrays (legacy)
   const raw = data.sections || {}
-  const SEC_NAMES = ['Intro','Verse','Reff','Bridge','Outro']
   sections = {}
-  SEC_NAMES.forEach(s => {
+  SECTION_NAMES.forEach(s => {
     const val = raw[s]
     if (Array.isArray(val)) {
-      // migrate legacy token array → plain text
-      sections[s] = tokenArrayToText(val)
+      sections[s] = legacyTokensToInline(val)
     } else {
       sections[s] = val || ''
     }
   })
 
-  // Load current section into textarea
   const ta = document.getElementById('chord-textarea')
   if (ta) ta.value = sections[currentSec] || ''
+  updatePreviewNow()
 }
 
-// Migrate legacy token array to plain text
-function tokenArrayToText(arr) {
+// Migrate old token array → [chord] inline format
+function legacyTokensToInline(arr) {
   if (!Array.isArray(arr)) return arr || ''
-  let text = ''
-  arr.forEach(token => {
-    // skip null, undefined, empty, or whitespace-only tokens
-    if (!token || typeof token !== 'string' || !token.trim()) return
-    if (token === '\n') { text += '\n'; return }
-    if (text && !text.endsWith('\n') && !text.endsWith(' ')) text += ' '
-    text += token
+  let result = ''
+  arr.forEach(t => {
+    if (!t || typeof t !== 'string' || !t.trim()) return
+    if (t === '\n') { result += '\n'; return }
+    result += '[' + t + '] '
   })
-  return text.trim()
+  return result.trim()
 }
 
 async function saveSong() {
-  // Save current textarea into sections before collecting
   saveSectionText()
 
   const title = document.getElementById('f-title').value.trim()
   if (!title) { toast('Judul wajib diisi'); return }
+
+  // Auto-derive plain lyrics from inline sections
+  const lyricParts = []
+  SECTION_NAMES.forEach(s => {
+    if (sections[s] && sections[s].trim()) {
+      lyricParts.push(s)
+      sections[s].split('\n').forEach(line => {
+        const plain = stripChords(line).trim()
+        if (plain) lyricParts.push(plain)
+      })
+      lyricParts.push('')
+    }
+  })
+  const derivedLyrics = lyricParts.join('\n').trim() || null
 
   const payload = {
     title,
@@ -339,7 +351,7 @@ async function saveSong() {
     genre: document.getElementById('f-genre').value.trim() || null,
     tempo: document.getElementById('f-tempo').value.trim() || null,
     notes: document.getElementById('f-notes').value.trim() || null,
-    lyrics: document.getElementById('f-lyrics').value.trim() || null,
+    lyrics: derivedLyrics,
     sections
   }
 
@@ -366,20 +378,17 @@ async function deleteSong() {
 }
 
 // ============================================================
-// CHORD TEXTAREA
+// CHORD TEXTAREA + LIVE PREVIEW
 // ============================================================
 
 function switchSec(sec, btn) {
-  // Save current textarea value before switching
   const ta = document.getElementById('chord-textarea')
   if (ta) sections[currentSec] = ta.value
-
   currentSec = sec
   document.querySelectorAll('.sec-tab').forEach(b => b.classList.remove('active'))
   if (btn) btn.classList.add('active')
-
-  // Load the new section's text
   if (ta) ta.value = sections[currentSec] || ''
+  updatePreviewNow()
 }
 
 function saveSectionText() {
@@ -387,14 +396,65 @@ function saveSectionText() {
   if (ta) sections[currentSec] = ta.value
 }
 
-function resetKbdState() {
-  // no-op — keyboard virtual sudah dihapus
+function updatePreviewDebounced() {
+  clearTimeout(previewTimer)
+  previewTimer = setTimeout(updatePreviewNow, 300)
 }
 
-// renderDisplay — tidak dipakai lagi, sections sekarang plain text
-function renderDisplay() {}
-function updatePreview() {}
-function updateModBtns() {}
+function updatePreviewNow() {
+  const ta = document.getElementById('chord-textarea')
+  const previewEl = document.getElementById('preview-content')
+  const keyEl = document.getElementById('preview-key')
+  if (!ta || !previewEl) return
+
+  const text = ta.value
+  const keyVal = document.getElementById('f-key') ? document.getElementById('f-key').value : 'C'
+  const keyIdx = keyIndex(keyVal)
+  if (keyEl) keyEl.textContent = keyVal
+
+  if (!text.trim()) {
+    previewEl.innerHTML = '<span style="color:var(--hint);font-style:italic;font-size:12px;">Belum ada konten...</span>'
+    return
+  }
+
+  const lines = parseInlineSection(text)
+  previewEl.innerHTML = lines.map(segments => {
+    const hasChord = segments.some(seg => seg.chord)
+    const hasLyric = segments.some(seg => seg.lyric && seg.lyric.trim())
+
+    if (!hasChord && !hasLyric) return '<div style="height:4px;"></div>'
+
+    // Chord-only line
+    if (hasChord && !hasLyric) {
+      const chords = segments
+        .filter(seg => seg.chord)
+        .map(seg => {
+          const name = escapeHtml(tokenToChord(seg.chord, keyIdx))
+          return `<span style="display:inline-block;background:var(--accent-light);color:var(--accent);border-radius:4px;padding:1px 7px;font-size:12px;font-weight:700;margin-right:6px;">${name}</span>`
+        }).join('')
+      return `<div style="margin-bottom:4px;">${chords}</div>`
+    }
+
+    // Chord + lyric: render chord badges then lyric text on separate rows
+    const chordBadges = []
+    const lyricTexts = []
+    segments.forEach(seg => {
+      if (seg.chord) {
+        const name = escapeHtml(tokenToChord(seg.chord, keyIdx))
+        chordBadges.push(`<span style="background:var(--accent-light);color:var(--accent);border-radius:3px;padding:0 5px;font-size:11px;font-weight:700;margin-right:5px;">${name}</span>`)
+      }
+      if (seg.lyric) lyricTexts.push(escapeHtml(seg.lyric))
+    })
+
+    return `<div>${chordBadges.join('')}</div><div style="margin-bottom:6px;">${lyricTexts.join('')}</div>`
+  }).join('')
+}
+
+// Update preview when key changes
+document.addEventListener('DOMContentLoaded', () => {
+  const keyEl = document.getElementById('f-key')
+  if (keyEl) keyEl.addEventListener('change', updatePreviewNow)
+})
 
 // ============================================================
 // SETLIST BUILDER
