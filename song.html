@@ -449,6 +449,7 @@ let song = null
 let navList = []
 let currentKeyIdx = 0
 let currentTab = localStorage.getItem('worship_tab') || 'chord'
+let isAdmin = false
 let showAsNotes = true
 let chordSize = 15
 let lyricSize = 15
@@ -541,7 +542,7 @@ function render() {
             <path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><circle cx="12" cy="9" r="2.5"/>
           </svg>
         </button>
-        <button class="icon-btn" onclick="location.href='admin.html?edit=${song.id}'" title="Edit lagu" aria-label="Edit lagu" style="font-size:18px;">✏️</button>
+        ${isAdmin ? `<button class="icon-btn" onclick="location.href='admin.html?edit=${song.id}'" title="Edit lagu" aria-label="Edit lagu" style="font-size:18px;">✏️</button>` : ''}
       </div>
     </div>
 
@@ -1041,6 +1042,8 @@ function escapeHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
 }
 
+// Show edit button if PIN was verified this session
+if (sessionStorage.getItem('_wa') === '1') isAdmin = true
 loadSong()
 </script>
 </body>

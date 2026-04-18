@@ -198,6 +198,32 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="supabase.js"></script>
 <script>
+// ============================================================
+// PIN GUARD
+// ============================================================
+const _AH = '33dc0ba86008f4434bd43d050df9022209367483c1eef5280b25da861c32f6ad'
+
+async function _hash(val) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(val))
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('')
+}
+
+async function checkPin() {
+  if (sessionStorage.getItem('_wa') === '1') return
+  const pin = prompt('Masukkan PIN Admin:')
+  if (!pin) { location.replace('index.html'); return }
+  const h = await _hash(pin.trim())
+  if (h !== _AH) {
+    alert('PIN salah.')
+    location.replace('index.html')
+    return
+  }
+  sessionStorage.setItem('_wa', '1')
+}
+
+checkPin()
+</script>
+<script>
 
 // ============================================================
 // STATE
