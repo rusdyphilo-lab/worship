@@ -8,6 +8,38 @@
 </head>
 <body>
 
+<!-- ONBOARDING MODAL -->
+<div id="onboarding-overlay" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.5);backdrop-filter:blur(2px);padding:24px 16px;overflow-y:auto;">
+  <div style="background:var(--surface);border-radius:16px;max-width:420px;margin:auto;overflow:hidden;">
+    <div style="background:var(--accent);padding:28px 20px 20px;text-align:center;color:#fff;">
+      <div style="font-size:36px;margin-bottom:8px;">🎵</div>
+      <div style="font-family:'Instrument Serif',serif;font-size:22px;margin-bottom:6px;">Selamat datang!</div>
+      <div style="font-size:13px;opacity:0.85;line-height:1.5;">Ini app chord & setlist untuk worship team. Bisa langsung dipakai tanpa login.</div>
+    </div>
+    <div style="padding:16px;">
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+        <div style="display:flex;gap:12px;align-items:flex-start;background:var(--bg);padding:12px;border-radius:10px;">
+          <span style="font-size:20px;">🔍</span>
+          <div><div style="font-weight:600;font-size:14px;margin-bottom:2px;">Cari lagu</div><div style="font-size:13px;color:var(--muted);">Ketik judul di kotak search. Ketuk lagu untuk lihat chord & lirik.</div></div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;background:var(--bg);padding:12px;border-radius:10px;">
+          <span style="font-size:20px;">📋</span>
+          <div><div style="font-weight:600;font-size:14px;margin-bottom:2px;">Lihat setlist</div><div style="font-size:13px;color:var(--muted);">Buka menu <b>Setlist</b> untuk lihat daftar lagu ibadah minggu ini.</div></div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;background:var(--bg);padding:12px;border-radius:10px;">
+          <span style="font-size:20px;">🎚️</span>
+          <div><div style="font-weight:600;font-size:14px;margin-bottom:2px;">Ganti key</div><div style="font-size:13px;color:var(--muted);">Di halaman lagu ada tombol ▲▼ untuk transpos chord ke key yang kamu mau.</div></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="closeOnboarding(true)" style="flex:1;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">Oke, Mengerti!</button>
+        <a href="panduan.html" style="flex:1;padding:12px;background:var(--accent-light);color:var(--accent);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;">Panduan Lengkap</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <nav>
   <a href="index.html" class="nav-brand">Worship</a>
   <div class="nav-links">
@@ -183,6 +215,16 @@ document.getElementById('search').addEventListener('input', e => {
 })
 
 loadSongs()
+
+// ONBOARDING — tampil sekali saat pertama buka
+function closeOnboarding(save) {
+  document.getElementById('onboarding-overlay').style.display = 'none'
+  if (save) localStorage.setItem('worship_onboarded', '1')
+}
+if (!localStorage.getItem('worship_onboarded')) {
+  document.getElementById('onboarding-overlay').style.display = 'block'
+}
+
 </script>
 </body>
 </html>

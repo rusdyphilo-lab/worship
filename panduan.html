@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panduan Worship App</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f7f5f0;
+      --surface: #ffffff;
+      --text: #1a1a1a;
+      --muted: #5a5a5a;
+      --hint: #999;
+      --accent: #2d5a3d;
+      --accent-light: #e8f0eb;
+      --border: #e5e2db;
+      --radius: 12px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111210;
+        --surface: #1c1e1b;
+        --text: #e8e6e0;
+        --muted: #a0a099;
+        --hint: #666;
+        --accent: #5a9e72;
+        --accent-light: #1e2f23;
+        --border: #2a2d29;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* HERO */
+    .hero {
+      background: var(--accent);
+      color: #fff;
+      padding: 48px 24px 36px;
+      text-align: center;
+    }
+    .hero-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    .hero-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 30px;
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+    .hero-sub {
+      font-size: 15px;
+      opacity: 0.8;
+      line-height: 1.5;
+    }
+
+    /* STEP CARDS */
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--hint);
+      margin: 28px 0 12px;
+    }
+
+    .step-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 10px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .step-num {
+      background: var(--accent-light);
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 13px;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .step-body {}
+    .step-title {
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+    .step-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .step-desc b { color: var(--text); font-weight: 600; }
+
+    /* VISUAL DEMO BOXES */
+    .demo-box {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+    .demo-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .demo-row:last-child { border-bottom: none; }
+    .demo-icon { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
+    .demo-text { color: var(--muted); line-height: 1.4; }
+    .demo-text b { color: var(--text); }
+
+    /* CHORD NUMBER EXPLAINER */
+    .chord-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .chord-cell {
+      background: var(--accent-light);
+      border-radius: 8px;
+      text-align: center;
+      padding: 8px 4px;
+    }
+    .chord-num {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+      display: block;
+    }
+    .chord-note {
+      font-size: 10px;
+      color: var(--muted);
+      display: block;
+      margin-top: 2px;
+    }
+
+    .key-example {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .key-example b { color: var(--text); }
+
+    /* TAB DEMO */
+    .tab-demo {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .tab-pill {
+      flex: 1;
+      text-align: center;
+      padding: 8px 4px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--bg);
+      color: var(--muted);
+    }
+    .tab-pill.active {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+
+    /* TIPS */
+    .tip-card {
+      background: var(--accent-light);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .tip-card b { color: var(--text); }
+
+    /* BOTTOM BUTTON */
+    .btn-primary {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      text-align: center;
+      text-decoration: none;
+      margin-top: 28px;
+      cursor: pointer;
+    }
+
+    /* FOOTER */
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--hint);
+      padding: 24px 16px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-icon">🎵</div>
+  <div class="hero-title">Panduan Worship App</div>
+  <div class="hero-sub">Semua yang perlu kamu tahu<br>buat worship team</div>
+</div>
+
+<div class="container">
+
+  <!-- BAGIAN 1: CARA BUKA -->
+  <div class="section-title">🗺️ Halaman-halaman di App</div>
+
+  <div class="step-card">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Halaman Lagu</div>
+      <div class="step-desc">Ini halaman utama. Kamu bisa <b>cari lagu</b> pakai kotak search, atau scroll untuk lihat semua lagu. Ketuk salah satu lagu untuk lihat chord dan liriknya.</div>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Halaman Setlist</div>
+      <div class="step-desc">Lihat daftar lagu untuk <b>ibadah minggu ini</b>. Sudah diurutkan dan sudah ada key-nya masing-masing. Tinggal buka, langsung siap.</div>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Halaman Admin</div>
+      <div class="step-desc">Khusus untuk <b>music leader</b>. Di sini bisa tambah lagu baru dan bikin setlist ibadah. Kalau kamu pemain / penyanyi, halaman ini tidak perlu dibuka.</div>
+    </div>
+  </div>
+
+  <!-- BAGIAN 2: DETAIL LAGU -->
+  <div class="section-title">🎸 Di Halaman Detail Lagu</div>
+
+  <div class="step-card">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Pilih tampilan yang kamu mau</div>
+      <div class="step-desc">Ada tiga tab di bagian atas:</div>
+      <div class="tab-demo">
+        <div class="tab-pill active">Chord</div>
+        <div class="tab-pill">Lirik</div>
+        <div class="tab-pill">Chord+Lirik</div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-row"><div class="demo-icon">🎸</div><div class="demo-text"><b>Chord</b> — progresi per bagian lagu (Intro, Verse, Reff…)</div></div>
+        <div class="demo-row"><div class="demo-icon">📝</div><div class="demo-text"><b>Lirik</b> — teks lagu saja, tanpa chord</div></div>
+        <div class="demo-row"><div class="demo-icon">🎼</div><div class="demo-text"><b>Chord+Lirik</b> — chord muncul di atas setiap kata</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Transposer — ganti key</div>
+      <div class="step-desc">Ada tombol <b>▲</b> dan <b>▼</b> di bagian atas lagu. Ketuk untuk naik atau turun semitone. Chord akan otomatis berubah semua sesuai key baru.</div>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Toggle Angka / Nada</div>
+      <div class="step-desc">Ada tombol kecil di samping transposer. Bisa pilih tampilan chord sebagai <b>angka</b> (1, 4, 5) atau <b>nama nada</b> (C, F, G). Bebas sesuai preferensi.</div>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">☀️ Tombol — layar tidak mati</div>
+      <div class="step-desc">Ada tombol ikon matahari/mata. Aktifkan supaya <b>layar HP tidak mati</b> saat sedang ibadah dan kamu butuh lihat chord terus.</div>
+    </div>
+  </div>
+
+  <!-- BAGIAN 3: SISTEM ANGKA -->
+  <div class="section-title">🔢 Sistem Chord Angka</div>
+
+  <div class="step-card">
+    <div class="step-num">!</div>
+    <div class="step-body">
+      <div class="step-title">Kenapa pakai angka?</div>
+      <div class="step-desc">Chord disimpan sebagai angka (1–7) supaya bisa <b>otomatis ganti key</b>. Kamu tidak perlu hafal ulang — app yang urus transposisinya.</div>
+      <div class="chord-grid">
+        <div class="chord-cell"><span class="chord-num">1</span><span class="chord-note">Do</span></div>
+        <div class="chord-cell"><span class="chord-num">2</span><span class="chord-note">Re</span></div>
+        <div class="chord-cell"><span class="chord-num">3</span><span class="chord-note">Mi</span></div>
+        <div class="chord-cell"><span class="chord-num">4</span><span class="chord-note">Fa</span></div>
+        <div class="chord-cell"><span class="chord-num">5</span><span class="chord-note">Sol</span></div>
+        <div class="chord-cell"><span class="chord-num">6</span><span class="chord-note">La</span></div>
+        <div class="chord-cell"><span class="chord-num">7</span><span class="chord-note">Si</span></div>
+      </div>
+      <div class="key-example">
+        Contoh progresi <b>1 – 4 – 5</b>:<br>
+        Di key <b>C</b> → <b>C – F – G</b><br>
+        Di key <b>G</b> → <b>G – C – D</b>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIPS -->
+  <div class="section-title">💡 Tips Cepat</div>
+
+  <div class="tip-card">
+    <b>Bookmark app-nya.</b> Buka di browser HP → ketuk ikon share → "Tambahkan ke Layar Utama". App akan muncul seperti ikon biasa.
+  </div>
+  <div class="tip-card">
+    <b>Sebelum ibadah</b>, buka setlist duluan dan biarkan tab browser terbuka. Sinyal jelek di gereja tidak masalah karena halaman sudah termuat.
+  </div>
+  <div class="tip-card">
+    <b>Ukuran teks</b> bisa diperbesar. Ada tombol <b>A+</b> / <b>A−</b> di halaman lagu. Sesuaikan sampai nyaman dibaca dari jarak jauh.
+  </div>
+
+  <a class="btn-primary" href="index.html">Buka App →</a>
+
+</div>
+
+<div class="footer">Worship App · Untuk tim internal</div>
+
+</body>
+</html>
