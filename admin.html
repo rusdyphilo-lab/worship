@@ -192,6 +192,7 @@ let allSongs = []
 let editingSongId = null
 let sections = { All: '' }
 let previewTimer = null
+let setlistSongs = []
 
 // ============================================================
 // PANEL SWITCHING
@@ -425,19 +426,27 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================
 // SETLIST BUILDER
 // ============================================================
+function escapeAttr(str) {
+  if (!str) return ''
+  return escapeHtml(str).replace(/'/g, '&#39;')
+}
+
 function renderSlPicker(songs) {
   const el = document.getElementById('sl-song-picker')
   if (!el) return
-  el.innerHTML = songs.map(s => `
-    <div class="card" style="margin-bottom:6px;" onclick="addToSetlist('${s.id}','${escapeHtml(s.title).replace(/'/g,'&#39;')}','${escapeHtml(s.default_key||'C')}')">
+  el.innerHTML = songs.map(s => {
+    const safeId = s.id
+    const safeTitle = escapeAttr(s.title)
+    const safeKey = escapeAttr(s.default_key || 'C')
+    return `
+    <div class="card" style="margin-bottom:6px;" onclick="addToSetlist('${safeId}','${safeTitle}','${safeKey}')">
       <div class="card-row">
         <div class="card-title" style="font-size:14px;">${escapeHtml(s.title)}</div>
         <span style="font-size:13px;color:var(--hint)">+ tambah</span>
       </div>
     </div>
-  `).join('')
+  `}).join('')
 }
-
 function filterSlSongs() {
   const q = document.getElementById('sl-search').value.toLowerCase()
   renderSlPicker(q ? allSongs.filter(s => s.title.toLowerCase().includes(q)) : allSongs)
