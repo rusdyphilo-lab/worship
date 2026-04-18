@@ -143,15 +143,29 @@
       <div class="kbd-wrap">
         <div class="section-label" style="margin-top:0">Chord &amp; Lirik</div>
 
+        <!-- Section label buttons -->
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+          <span style="font-size:11px;color:var(--hint);align-self:center;margin-right:2px;">Sisipkan label:</span>
+          <button class="btn" style="padding:3px 10px;font-size:12px;" onclick="insertLabel('Intro')">Intro</button>
+          <button class="btn" style="padding:3px 10px;font-size:12px;" onclick="insertLabel('Verse 1')">Verse</button>
+          <button class="btn" style="padding:3px 10px;font-size:12px;" onclick="insertLabel('Pre-Chorus')">Pre-Chorus</button>
+          <button class="btn" style="padding:3px 10px;font-size:12px;" onclick="insertLabel('Reff')">Reff</button>
+          <button class="btn" style="padding:3px 10px;font-size:12px;" onclick="insertLabel('Bridge')">Bridge</button>
+          <button class="btn" style="padding:3px 10px;font-size:12px;" onclick="insertLabel('Interlude')">Interlude</button>
+          <button class="btn" style="padding:3px 10px;font-size:12px;" onclick="insertLabel('Outro')">Outro</button>
+        </div>
+
         <textarea class="input-field" id="chord-textarea" rows="12"
-          placeholder="Tulis chord dalam [kurung] langsung di lirik:&#10;&#10;[1]Ku mau me[4]muji Tu[5]han[1]ku&#10;[1]'ku mau me[4]muji Ra[5]ja[1]ku&#10;&#10;Suffix: [2m] [5sus4] [1maj7] [4/5] [6m7]&#10;Enter = baris baru"
+          placeholder="Tulis chord dalam [kurung] langsung di lirik:&#10;&#10;**Verse 1**&#10;[1]Ku mau me[4]muji Tu[5]han[1]ku&#10;&#10;**Reff**&#10;[4]Haleluya [5]Tuhan[1]ku&#10;&#10;Label section: **Intro**, **Verse 1**, **Reff**, dll&#10;Chord: [1] [4m] [5sus4] [4/5]"
           style="resize:vertical;font-size:14px;font-family:monospace;line-height:2;letter-spacing:0.02em;"
           oninput="saveSectionText(); updatePreviewDebounced()"></textarea>
 
         <div class="hint-text">
+          Label section: <code style="background:var(--accent-light);color:var(--accent);padding:1px 5px;border-radius:4px;font-size:11px;">**Intro**</code>
+          &nbsp;&middot;&nbsp;
           Chord dalam <code style="background:var(--accent-light);color:var(--accent);padding:1px 5px;border-radius:4px;font-size:11px;">[kurung]</code>
-          langsung di baris lirik &nbsp;&middot;&nbsp;
-          Suffix: m, 7, m7, maj7, sus4, dim, aug, add9 &nbsp;&middot;&nbsp;
+          &nbsp;&middot;&nbsp;
+          Suffix: m, 7, m7, maj7, sus4, dim, aug &nbsp;&middot;&nbsp;
           Slash: [4/5]
         </div>
 
@@ -392,17 +406,24 @@ function updatePreviewNow() {
     return
   }
 
-  const lines = parseInlineSection(text)
-  previewEl.innerHTML = lines.map(segments => {
+  const rawLines = text.split('\n')
+  previewEl.innerHTML = rawLines.map(line => {
+    // Section label
+    if (/^\*\*(.+)\*\*$/.test(line.trim())) {
+      const labelText = line.trim().replace(/^\*\*(.+)\*\*$/, '$1')
+      return `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);background:var(--accent-light);display:inline-block;padding:1px 8px;border-radius:20px;margin:10px 0 5px;">${escapeHtml(labelText)}</div><br>`
+    }
+
+    const segments = parseInlineLine(line)
     const hasChord = segments.some(seg => seg.chord && seg.chord.trim())
     const hasLyric = segments.some(seg => seg.lyric && seg.lyric.trim())
 
     if (!hasChord && !hasLyric) return '<div style="height:6px;"></div>'
 
-    // Pure label line (no chord)
+    // Pure lyric line (no chord)
     if (!hasChord) {
       const label = segments.map(s => escapeHtml(s.lyric || '')).join('')
-      return `<div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--hint);margin-top:8px;margin-bottom:2px;">${label}</div>`
+      return `<div style="font-size:13px;margin-bottom:4px;">${label}</div>`
     }
 
     // Chord-only line
@@ -455,6 +476,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const keyEl = document.getElementById('f-key')
   if (keyEl) keyEl.addEventListener('change', updatePreviewNow)
 })
+
+// ============================================================
+// SECTION LABEL INSERTER
+// ============================================================
+function insertLabel(name) {
+  const ta = document.getElementById('chord-textarea')
+  if (!ta) return
+  const start = ta.selectionStart
+  const end = ta.selectionEnd
+  const val = ta.value
+  const label = '**' + name + '**'
+  // Add newline before if not at start of line
+  const before = start > 0 && val[start - 1] !== '\n' ? '\n' : ''
+  const insert = before + label + '\n'
+  ta.value = val.slice(0, start) + insert + val.slice(end)
+  const newPos = start + insert.length
+  ta.selectionStart = ta.selectionEnd = newPos
+  ta.focus()
+  saveSectionText()
+  updatePreviewNow()
+}
+
 
 // ============================================================
 // SETLIST BUILDER

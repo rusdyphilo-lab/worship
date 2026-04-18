@@ -379,20 +379,26 @@ function setActive(selector, activeEl) {
 
 // Split plain lyrics text into labeled blocks (Verse, Chorus, etc.)
 // Returns array of { label: string|null, lines: string[] }
+// isSectionLabel: baris dianggap label section jika ditulis **seperti ini**
+function isSectionLabel(line) {
+  return /^\*\*(.+)\*\*$/.test(line.trim())
+}
+
+function sectionLabelText(line) {
+  const m = line.trim().match(/^\*\*(.+)\*\*$/)
+  return m ? m[1] : line.trim()
+}
+
 function splitLyricByLabels(text) {
   if (!text) return []
-  const LABELS = ['intro','verse','reff','chorus','bridge','outro','persembahan','pre-chorus','interlude','coda']
   const lines = text.split('\n')
   const blocks = []
   let current = { label: null, lines: [] }
 
   for (const line of lines) {
-    const trimmed = line.trim()
-    const lower = trimmed.toLowerCase()
-    const isLabel = LABELS.some(l => lower === l || lower.startsWith(l + ' ') || lower.startsWith(l + ':'))
-    if (isLabel) {
+    if (isSectionLabel(line)) {
       if (current.lines.some(l => l.trim())) blocks.push(current)
-      current = { label: trimmed, lines: [] }
+      current = { label: sectionLabelText(line), lines: [] }
     } else {
       current.lines.push(line)
     }

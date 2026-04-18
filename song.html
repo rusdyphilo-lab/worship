@@ -356,6 +356,30 @@
       white-space: pre-wrap;
       word-break: break-word;
     }
+    .cl-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: var(--accent-light);
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      margin: 14px 0 8px;
+    }
+    .chord-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: var(--accent-light);
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      margin: 14px 0 6px;
+    }
     .cl-instrumental {
       font-size: calc(var(--cl-size) * 0.85);
       color: var(--hint);
@@ -650,6 +674,14 @@ function renderChordSections() {
 }
 
 // Render chord-only view from inline [chord]lyric text
+function isSectionLabel(line) {
+  return /^\*\*(.+)\*\*$/.test(line.trim())
+}
+function sectionLabelText(line) {
+  const m = line.trim().match(/^\*\*(.+)\*\*$/)
+  return m ? m[1] : line.trim()
+}
+
 function renderSectionChordOnly(data) {
   if (!data) return ''
   const text = typeof data === 'string' ? data : legacyToText(data)
@@ -657,8 +689,13 @@ function renderSectionChordOnly(data) {
 
   // If new inline format
   if (isInlineFormat(text)) {
-    const lines = parseInlineSection(text)
-    return lines.map(segments => {
+    const rawLines = text.split('\n')
+    return rawLines.map(line => {
+      // Section label
+      if (isSectionLabel(line)) {
+        return `<div class="chord-section-label">${escapeHtml(sectionLabelText(line))}</div>`
+      }
+      const segments = parseInlineLine(line)
       const chords = segments.filter(seg => seg.chord)
       if (chords.length === 0) return ''
       const pills = chords.map(seg => {
@@ -733,8 +770,14 @@ function renderInlineChordLyric(data) {
     return renderSectionChordOnly(data)
   }
 
-  const lines = parseInlineSection(text)
-  return lines.map(segments => {
+  const rawLines = text.split('\n')
+  return rawLines.map(line => {
+    // Section label
+    if (isSectionLabel(line)) {
+      return `<div class="cl-section-label">${escapeHtml(sectionLabelText(line))}</div>`
+    }
+
+    const segments = parseInlineLine(line)
     const hasChord = segments.some(seg => seg.chord && seg.chord.trim())
     const hasLyric = segments.some(seg => seg.lyric && seg.lyric.trim())
 
@@ -818,12 +861,67 @@ function renderInlineChordLyric(data) {
 // ============================================================
 
 function renderLyricMode() {
-  let lyrics = ''
+  let raw = ''
   if (song.sections && song.sections.All && song.sections.All.trim()) {
-    lyrics = song.sections.All.replace(/\[[^\]]*\]/g, '')
+    raw = song.sections.All
   } else {
-    lyrics = (song.lyrics || '').replace(/\[[^\]]*\]/g, '')
+    raw = song.lyrics || ''
   }
+
+  if (!raw.trim()) {
+    return '<div class="empty"><div class="empty-icon">🎵</div><div class="empty-title">Belum ada lirik.</div></div>'
+  }
+
+  // Pass 1: strip chords per line, classify each line
+  const inputLines = raw.split('\n')
+  const classified = inputLines.map(line => {
+    const isLbl = isSectionLabel(line)
+    const stripped = isLbl ? sectionLabelText(line) : line.replace(/\[[^\]]*\]/g, '').trimEnd()
+    const trimmed = stripped.trim()
+    return {
+      text: stripped,
+      empty: !trimmed,
+      label: isLbl
+    }
+  })
+
+  // Pass 2: for each label, check if there's any real lyric line before the next label/end
+  // If not, mark the label as "no lyric" → drop it
+  const outputLines = []
+  let lastWasBlank = false
+
+  for (let i = 0; i < classified.length; i++) {
+    const cur = classified[i]
+
+    if (cur.label) {
+      // Look ahead: is there any non-empty, non-label line before next label or end?
+      let hasLyric = false
+      for (let j = i + 1; j < classified.length; j++) {
+        if (classified[j].label) break
+        if (!classified[j].empty) { hasLyric = true; break }
+      }
+      if (!hasLyric) continue  // drop label with no lyrics under it
+      outputLines.push(cur.text)
+      lastWasBlank = false
+      continue
+    }
+
+    if (cur.empty) {
+      if (!lastWasBlank && outputLines.length > 0) {
+        outputLines.push('')
+        lastWasBlank = true
+      }
+      continue
+    }
+
+    outputLines.push(cur.text)
+    lastWasBlank = false
+  }
+
+  // Trim trailing blank lines
+  while (outputLines.length && outputLines[outputLines.length - 1] === '') outputLines.pop()
+
+  const lyrics = outputLines.join('\n')
 
   if (!lyrics.trim()) {
     return '<div class="empty"><div class="empty-icon">🎵</div><div class="empty-title">Belum ada lirik.</div></div>'
@@ -831,7 +929,6 @@ function renderLyricMode() {
 
   return `<div class="lyrics-block" style="white-space:pre-wrap;font-size:var(--lyric-size);line-height:1.8;">${escapeHtml(lyrics)}</div>`
 }
-
 // ============================================================
 // CONTROLS
 // ============================================================
