@@ -448,7 +448,7 @@ const SECTION_ORDER = ['Intro','Verse','Reff','Bridge','Outro','Persembahan']
 let song = null
 let navList = []
 let currentKeyIdx = 0
-let currentTab = 'chord'
+let currentTab = localStorage.getItem('worship_tab') || 'chord'
 let showAsNotes = true
 let chordSize = 15
 let lyricSize = 15
@@ -982,6 +982,7 @@ function changeLyricSize(delta) {
 
 function switchTab(tab) {
   currentTab = tab
+  localStorage.setItem('worship_tab', tab)
   const chord = document.getElementById('tab-chord')
   const lyric = document.getElementById('tab-lyric')
   const both = document.getElementById('tab-both')
